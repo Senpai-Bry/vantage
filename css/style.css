@@ -1,0 +1,124 @@
+/* style.css
+   Dark, neon-accented look for Vantage — meant to feel like a fog-of-war
+   exploration map rather than a standard business map embed. */
+
+:root {
+  --bg: #0b0e14;
+  --panel-bg: #12161f;
+  --neon: #39ff88;
+  --neon-dim: #1f8f52;
+  --text: #e7e9ee;
+  --text-dim: #9aa1b1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#app-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000; /* above the Leaflet map */
+  padding: 14px 20px;
+  pointer-events: none; /* let clicks pass through to the map underneath */
+}
+
+#app-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.08em;
+  color: var(--neon);
+  text-shadow: 0 0 10px rgba(57, 255, 136, 0.6);
+}
+
+#app-header .tagline {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+#map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Custom turf marker — a glowing dot instead of Leaflet's default pin */
+.turf-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--neon);
+  box-shadow: 0 0 6px 2px rgba(57, 255, 136, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Info panel for the selected turf zone */
+#turf-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  max-width: 360px;
+  z-index: 1000;
+  background: var(--panel-bg);
+  border: 1px solid var(--neon-dim);
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+#turf-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+}
+
+#turf-panel h2 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  color: var(--neon);
+}
+
+#turf-panel p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+#turf-panel-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#turf-panel-close:hover {
+  color: var(--text);
+}
+
+@media (min-width: 600px) {
+  #turf-panel {
+    left: 20px;
+    right: auto;
+  }
+}
