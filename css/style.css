@@ -7,6 +7,8 @@
   --panel-bg: #12161f;
   --neon: #39ff88;
   --neon-dim: #1f8f52;
+  --gold: #ffc94d;
+  --gold-dim: #8f6a1f;
   --text: #e7e9ee;
   --text-dim: #9aa1b1;
 }
@@ -65,6 +67,12 @@ html, body {
   border: 2px solid rgba(255, 255, 255, 0.8);
 }
 
+/* Claimed turf glows gold instead of green */
+.turf-marker.turf-marker--claimed {
+  background: var(--gold);
+  box-shadow: 0 0 8px 3px rgba(255, 201, 77, 0.9);
+}
+
 /* Info panel for the selected turf zone */
 #turf-panel {
   position: absolute;
@@ -98,6 +106,41 @@ html, body {
   font-size: 0.9rem;
   color: var(--text-dim);
   line-height: 1.4;
+}
+
+#turf-panel-claim {
+  margin-top: 14px;
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--neon-dim);
+  background: transparent;
+  color: var(--neon);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+#turf-panel-claim:hover {
+  background: rgba(57, 255, 136, 0.12);
+}
+
+#turf-panel-claim.claimed {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+#turf-panel-claim.claimed:hover {
+  background: rgba(255, 201, 77, 0.12);
+}
+
+#turf-panel-status {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  opacity: 0.8;
 }
 
 #turf-panel-close {

@@ -5,10 +5,13 @@ A GPS-based, turf-control photography game. Players explore a city, claim
 that turf against other players — inspired by *The Warriors* more than a
 shrinking-zone battle royale.
 
-This is the very first step: a working map screen. No backend, no accounts,
-no challenges yet — just Leaflet.js rendering real OpenStreetMap data with
-a dark, fog-of-war style and a couple of real landmarks in Goose Creek, SC
-as placeholder turf zones.
+This is the first step: a working map screen with a basic claim mechanic.
+No accounts or backend yet — Leaflet.js renders real OpenStreetMap data in
+a dark, fog-of-war style, with four real landmarks in Goose Creek, SC as
+turf zones you can click and claim. Claims are saved in your browser
+(via `localStorage`), so they stick around between visits, but they're
+local to whichever browser you claimed them in — nothing is shared between
+devices or players yet.
 
 ## Running it
 
@@ -43,27 +46,33 @@ the map logic itself.
 2. `L.tileLayer(...)` tells Leaflet where to download the actual map
    images ("tiles") from. We're using CartoDB's free "Dark Matter" tiles —
    real OpenStreetMap data, styled dark — no API key required.
-3. For each landmark in `landmarks.js`, we drop a glowing green marker
-   (`L.marker`) and listen for a click on it. Clicking a marker slides up
-   the info panel at the bottom-left with that zone's name and description.
+3. For each landmark in `landmarks.js`, we drop a glowing marker
+   (`L.marker`) — green if unclaimed, gold if claimed — and listen for a
+   click on it. Clicking a marker slides up the info panel at the
+   bottom-left with that zone's name, description, and a claim button.
+4. Clicking "Claim this turf" saves a `{ claimedAt: <timestamp> }` record
+   for that landmark's id into `localStorage` under the key
+   `vantage:claims`, turns its marker gold, and swaps the button to
+   "Release this turf" so you can undo it. Reloading the page reads that
+   same `localStorage` key back out, so claimed turf stays claimed.
 
 ## Next steps (not built yet)
 
-- Real "claiming" mechanic — right now clicking a marker just shows info,
-  it doesn't claim anything.
-- Photo challenge flow (upload/take a photo at a zone to claim it).
-- Accounts + a real backend to persist who owns which turf.
+- Photo challenge flow (upload/take a photo at a zone to actually earn a
+  claim, instead of just clicking a button).
+- Accounts + a real backend, so claims are shared across players and
+  devices instead of living only in one browser's `localStorage`.
 - Skill-based divisions instead of one global leaderboard.
 - Step-counter / distance-tracking element.
-- Swap the two placeholder landmarks for the full landmark list you want
-  in v1, and fix up their coordinates if they're not pinned precisely
-  enough (the ones here came from public map listings, not hand-verified
-  GPS).
+- Add more landmarks to `landmarks.js` for the full v1 list, and
+  double-check any coordinates you're not sure about (see below).
 
 ## A note on coordinates
 
-The coordinates in `landmarks.js` are approximate, pulled from public
-sources (school directory listings, the city's own contact page). They're
-close enough to prototype with, but nudge them if you want a marker sitting
-exactly on a building — right-click the spot on Google Maps to copy exact
-coordinates, then paste them into the `coords` array for that landmark.
+The coordinates in `landmarks.js` are pulled from public sources (school
+directory listings, Wikipedia, the city's own contact page). Goose Creek
+High School, St. James Church, and Stratford High School are solid; Goose
+Creek City Hall is a close estimate off its street address rather than a
+verified pin. Nudge any of them if you want a marker sitting exactly on a
+building — right-click the spot on Google Maps to copy exact coordinates,
+then paste them into that landmark's `coords` array.

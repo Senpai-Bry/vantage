@@ -20,6 +20,19 @@ const LANDMARKS = [
     coords: [32.9814, -80.0329],
     description: "519 North Goose Creek Blvd — the seat of city government.",
   },
+  {
+    id: "st-james-church",
+    name: "St. James Church",
+    coords: [32.97549, -80.032670],
+    description:
+      "Built in the 1710s — one of South Carolina's oldest surviving buildings and one of a handful of early Georgian chapels left in the country.",
+  },
+  {
+    id: "stratford-high",
+    name: "Stratford High School",
+    coords: [33.022484, -80.09841],
+    description: "951 Crowfield Blvd — home of the Knights, on the west side of the city.",
+  },
 ];
 
 // Roughly the center of Goose Creek, SC — used to point the map here on load.
