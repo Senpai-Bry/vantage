@@ -6,3 +6,5 @@ server/.env
 server/db/*.db
 server/db/*.db-shm
 server/db/*.db-wal
+server/uploads/*
+!server/uploads/.gitkeep

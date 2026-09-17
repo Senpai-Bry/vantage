@@ -11,6 +11,7 @@ const cors = require("cors");
 const config = require("./config");
 const authRouter = require("./routes/auth");
 const zonesRouter = require("./routes/zones");
+const submissionsRouter = require("./routes/submissions");
 
 const app = express();
 
@@ -19,9 +20,15 @@ app.use(express.json());
 
 app.use("/api/auth", authRouter);
 app.use("/api/zones", zonesRouter);
+// Adds POST/GET /api/zones/:id/submissions and POST /api/submissions/:id/vote.
+app.use("/api", submissionsRouter);
 
-// Everything that isn't an /api/* route is the frontend — index.html,
-// css/style.css, js/app.js, etc, all live one level up from server/.
+// Uploaded photos, served as plain static files at /uploads/<filename>.
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Everything that isn't an /api/* or /uploads/* route is the frontend —
+// index.html, css/style.css, js/app.js, etc, all live one level up from
+// server/.
 app.use(express.static(path.join(__dirname, "..")));
 
 app.listen(config.port, () => {

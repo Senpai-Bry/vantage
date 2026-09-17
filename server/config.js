@@ -11,6 +11,13 @@ const config = {
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5000",
   jwtSecret: process.env.JWT_SECRET,
   dbPath: process.env.DB_PATH || require("path").join(__dirname, "db", "vantage.db"),
+
+  // How often each zone's photo challenge rotates to the next prompt in its
+  // list. 24 (hours) is the real setting; while testing locally, set this
+  // to something tiny in your .env (e.g. 0.02, about a minute) so you don't
+  // have to wait a full day to see a rotation happen.
+  challengeRotationMs:
+    Number(process.env.CHALLENGE_ROTATION_HOURS || 24) * 60 * 60 * 1000,
 };
 
 // Fail loudly at startup rather than silently signing tokens with

@@ -1,8 +1,8 @@
 // server/db/index.js
 //
 // Opens (and creates, if it doesn't exist yet) the SQLite database file,
-// makes sure the schema exists, and seeds the zones table from
-// data/landmarks.js. Every other file in the server just does
+// makes sure the schema exists, and seeds the zones + zone_challenges
+// tables from data/landmarks.js. Every other file in the server just does
 // `const db = require("../db")` and gets back a ready-to-query
 // better-sqlite3 database.
 
@@ -34,14 +34,59 @@ db.exec(`
     user_id INTEGER NOT NULL REFERENCES users(id),
     claimed_at INTEGER NOT NULL
   );
+
+  -- The pool of photo prompts each zone rotates through. "position" is the
+  -- prompt's place in that zone's list in landmarks.js (0, 1, 2, ...).
+  CREATE TABLE IF NOT EXISTS zone_challenges (
+    zone_id TEXT NOT NULL REFERENCES zones(id),
+    position INTEGER NOT NULL,
+    prompt TEXT NOT NULL,
+    PRIMARY KEY (zone_id, position)
+  );
+
+  -- A photo someone submitted to a zone, answering whichever challenge was
+  -- current at the moment they submitted it.
+  CREATE TABLE IF NOT EXISTS submissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    zone_id TEXT NOT NULL REFERENCES zones(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    challenge_index INTEGER NOT NULL,
+    photo_path TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  -- One vote = one row. The primary key being (submission_id, user_id)
+  -- is what makes "one vote per person per photo" a database guarantee
+  -- instead of something the application code has to remember to check.
+  CREATE TABLE IF NOT EXISTS votes (
+    submission_id INTEGER NOT NULL REFERENCES submissions(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (submission_id, user_id)
+  );
 `);
 
-// Seed the zones table from the landmarks list. INSERT OR IGNORE means
-// this is safe to run on every startup — a zone that's already there
-// (matched by its slug id) is left alone, so existing claims never get
-// wiped out just by restarting the server.
+// --- Migration: add the two rotation columns to `zones` if this database
+// was created before they existed. CREATE TABLE IF NOT EXISTS above won't
+// touch a table that already exists, so a zones table from before this
+// feature existed needs these columns added by hand, once, safely.
+const zoneColumns = db.prepare("PRAGMA table_info(zones)").all().map((c) => c.name);
+if (!zoneColumns.includes("current_challenge_index")) {
+  db.exec("ALTER TABLE zones ADD COLUMN current_challenge_index INTEGER NOT NULL DEFAULT 0");
+}
+if (!zoneColumns.includes("challenge_rotated_at")) {
+  db.exec("ALTER TABLE zones ADD COLUMN challenge_rotated_at INTEGER");
+}
+
+// Seed zones from the landmarks list. INSERT OR IGNORE means this is safe
+// to run on every startup — a zone that's already there (matched by its
+// slug id) is left alone, so existing claims/submissions never get wiped
+// out just by restarting the server.
 const insertZone = db.prepare(
   "INSERT OR IGNORE INTO zones (id, name, lat, lng, description) VALUES (?, ?, ?, ?, ?)"
+);
+const insertChallenge = db.prepare(
+  "INSERT OR IGNORE INTO zone_challenges (zone_id, position, prompt) VALUES (?, ?, ?)"
 );
 for (const landmark of LANDMARKS) {
   insertZone.run(
@@ -51,6 +96,16 @@ for (const landmark of LANDMARKS) {
     landmark.coords[1],
     landmark.description
   );
+  (landmark.challenges || []).forEach((prompt, position) => {
+    insertChallenge.run(landmark.id, position, prompt);
+  });
 }
+
+// Give every zone a starting point for its rotation timer, so the "has it
+// been long enough to rotate?" math in lib/challenges.js always has a real
+// timestamp to compare against.
+db.prepare(
+  "UPDATE zones SET challenge_rotated_at = ? WHERE challenge_rotated_at IS NULL"
+).run(Date.now());
 
 module.exports = db;
