@@ -32,6 +32,15 @@ body {
   flex-direction: column;
 }
 
+/* A small generic utility for "hide this completely" — used by the
+   submit form. (#turf-panel and #auth-logged-in/out have their own more
+   specific .hidden rules below, which — being ID-scoped — always win over
+   this one regardless of source order, so adding this doesn't disturb
+   them.) */
+.hidden {
+  display: none !important;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Header                                                                  */
 /* ---------------------------------------------------------------------- */
@@ -210,7 +219,10 @@ body {
   z-index: 1000; /* above Leaflet's own panes */
   left: 1rem;
   bottom: 1rem;
-  width: min(320px, calc(100vw - 2rem));
+  width: min(340px, calc(100vw - 2rem));
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -246,42 +258,175 @@ body {
 #turf-panel-title {
   margin: 0 1.5rem 0.4rem 0;
   font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 #turf-panel-desc {
-  margin: 0 0 0.9rem 0;
+  margin: 0 0 0.7rem 0;
   font-size: 0.9rem;
   color: var(--text-dim);
   line-height: 1.4;
+  flex-shrink: 0;
 }
 
-#turf-panel-claim {
-  width: 100%;
-  padding: 0.55rem 0.75rem;
+#turf-panel-challenge {
+  margin: 0 0 0.3rem 0;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--accent-gold);
+  flex-shrink: 0;
+}
+
+#turf-panel-status {
+  margin: 0 0 0.7rem 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Submit-a-photo form                                                     */
+/* ---------------------------------------------------------------------- */
+
+#turf-submit-form {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+#turf-submit-input {
+  flex: 1;
+  min-width: 0; /* let a long filename shrink instead of overflowing */
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.4rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+#turf-submit-input:disabled {
+  opacity: 0.5;
+}
+
+#turf-submit-btn {
   border: none;
   border-radius: 6px;
+  padding: 0.5rem 0.75rem;
   background: var(--accent-green);
   color: #06210f;
   font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
+  white-space: nowrap;
   transition: background-color 0.2s ease;
 }
 
-#turf-panel-claim:hover {
+#turf-submit-btn:hover {
   filter: brightness(1.08);
 }
 
-#turf-panel-claim:disabled {
+#turf-submit-btn:disabled {
   background: var(--border);
   color: var(--text-dim);
   cursor: not-allowed;
   filter: none;
 }
 
-#turf-panel-status {
-  margin: 0.6rem 0 0 0;
-  font-size: 0.8rem;
+#turf-submit-status {
+  margin: 0.4rem 0 0.6rem 0;
+  font-size: 0.78rem;
   color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Submissions gallery                                                     */
+/* ---------------------------------------------------------------------- */
+
+#turf-submissions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.turf-submissions-empty {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.turf-submission {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* The current vote leader — i.e. whoever holds the zone right now — gets
+   a gold outline so it's obvious at a glance which photo is "in the lead". */
+.turf-submission--leading {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 1px rgba(244, 197, 66, 0.35);
+}
+
+.turf-submission-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--input-bg);
+}
+
+.turf-submission-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.turf-submission-user {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.turf-submission-vote {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.turf-submission-vote:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+}
+
+.turf-submission-vote--active {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.turf-submission-vote:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -301,5 +446,9 @@ body {
 
   #auth-form input {
     width: 100%;
+  }
+
+  #turf-submit-form {
+    flex-direction: column;
   }
 }

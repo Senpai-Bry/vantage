@@ -61,13 +61,30 @@
   <!-- Leaflet draws the map into this div -->
   <div id="map"></div>
 
-  <!-- Simple info panel that shows details for whichever turf zone is selected -->
+  <!-- Info panel for whichever turf zone is selected: its challenge, who
+       holds it, a form to submit a photo, and the gallery of everyone
+       else's submissions (with vote buttons). -->
   <aside id="turf-panel" class="hidden">
     <button id="turf-panel-close" aria-label="Close">&times;</button>
     <h2 id="turf-panel-title">Zone name</h2>
     <p id="turf-panel-desc">Zone description</p>
-    <button id="turf-panel-claim">Claim this turf</button>
+
+    <p id="turf-panel-challenge"></p>
     <p id="turf-panel-status"></p>
+
+    <form id="turf-submit-form">
+      <input
+        type="file"
+        id="turf-submit-input"
+        accept="image/*"
+        capture="environment"
+        required
+      />
+      <button type="submit" id="turf-submit-btn">Submit photo</button>
+    </form>
+    <p id="turf-submit-status"></p>
+
+    <ul id="turf-submissions-list"></ul>
   </aside>
 
   <!-- Leaflet's JS -->

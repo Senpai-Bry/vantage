@@ -1,23 +1,19 @@
 // js/app.js
 //
-// The map logic. Zone data (name/coords/description) and ownership both
-// come from the backend now — GET /api/zones returns everything in one
-// call. To add a new turf zone, edit server/data/landmarks.js and restart
-// the server; this file never needs to change for that.
+// The map logic. Zone data (name/coords/description/current challenge) and
+// ownership both come from the backend — GET /api/zones returns everything
+// in one call, and ownership is derived from votes, not a manual claim.
+// Submitting a photo and voting also live here, talking to the endpoints
+// in server/routes/submissions.js.
 
 // ---------------------------------------------------------------------------
 // 1. The map
 // ---------------------------------------------------------------------------
 
-// Center roughly over the middle of the landmarks, zoomed out enough to see
-// all of them at once.
 const map = L.map("map").setView([32.99, -80.05], 12);
 
 // Esri's free "World Dark Gray Base" tiles: real map data, styled dark, no
-// API key or account required. (CartoDB's old free "Dark Matter" tiles —
-// what this used to point at — now require a CARTO account/API key and
-// show a watermark without one, which is the "API key required" text you
-// were seeing.)
+// API key or account required.
 L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
   {
@@ -42,8 +38,6 @@ function makeIcon(zone) {
 
   return L.divIcon({
     className: "", // prevent Leaflet's default marker styles from leaking in
-    // data-zone-id makes each marker's zone identifiable in the DOM (handy
-    // for automated testing, and harmless otherwise).
     html: `<div class="${classes.join(" ")}" data-zone-id="${zone.id}" title="${zone.name}"></div>`,
     iconSize: [22, 22],
     iconAnchor: [11, 11],
@@ -51,7 +45,7 @@ function makeIcon(zone) {
 }
 
 // Keep a lookup from zone id -> { zone, marker } so click handlers and the
-// panel can find each other, and so a claim/release can update just one
+// panel can find each other, and so a vote/submission can update just one
 // marker without re-drawing all of them.
 const zones = {};
 
@@ -76,6 +70,15 @@ loadZones().catch((err) => {
   console.error("Couldn't load turf zones:", err);
 });
 
+// Re-fetches one zone and re-renders its marker + (if it's the open one)
+// the panel. Called after anything that could change who holds a
+// zone — a new submission, or a vote.
+async function refreshZone(zoneId) {
+  const zone = await api(`/api/zones/${zoneId}`);
+  renderZone(zone);
+  if (activeZoneId === zoneId) refreshPanel();
+}
+
 // ---------------------------------------------------------------------------
 // 3. Info panel
 // ---------------------------------------------------------------------------
@@ -83,9 +86,16 @@ loadZones().catch((err) => {
 const panel = document.getElementById("turf-panel");
 const panelTitle = document.getElementById("turf-panel-title");
 const panelDesc = document.getElementById("turf-panel-desc");
-const panelClaimBtn = document.getElementById("turf-panel-claim");
+const panelChallenge = document.getElementById("turf-panel-challenge");
 const panelStatus = document.getElementById("turf-panel-status");
 const panelCloseBtn = document.getElementById("turf-panel-close");
+
+const submitForm = document.getElementById("turf-submit-form");
+const submitInput = document.getElementById("turf-submit-input");
+const submitBtn = document.getElementById("turf-submit-btn");
+const submitStatus = document.getElementById("turf-submit-status");
+
+const submissionsList = document.getElementById("turf-submissions-list");
 
 let activeZoneId = null;
 
@@ -95,7 +105,10 @@ function openPanel(id) {
 
   panelTitle.textContent = zone.name;
   panelDesc.textContent = zone.description;
+  submitForm.reset();
+
   refreshPanel();
+  loadSubmissions(id);
 
   panel.classList.remove("hidden");
 }
@@ -110,61 +123,136 @@ function refreshPanel() {
   const { zone } = zones[activeZoneId];
   const me = Auth.getUsername();
 
-  panelClaimBtn.disabled = false;
+  panelChallenge.textContent = zone.currentChallenge
+    ? `Challenge: ${zone.currentChallenge}`
+    : "";
 
-  if (!Auth.isLoggedIn()) {
-    panelClaimBtn.textContent = "Log in to claim";
-    panelClaimBtn.disabled = true;
-    panelStatus.textContent = zone.owner ? `Held by ${zone.owner}` : "Unclaimed";
-  } else if (!zone.owner) {
-    panelClaimBtn.textContent = "Claim this turf";
-    panelStatus.textContent = "Unclaimed";
+  if (!zone.owner) {
+    panelStatus.textContent = "Unclaimed — be the first to submit a photo.";
   } else if (zone.owner === me) {
-    panelClaimBtn.textContent = "Release this turf";
-    panelStatus.textContent =
-      "Held by you since " + new Date(zone.claimedAt).toLocaleString();
+    panelStatus.textContent = "Held by you.";
   } else {
-    panelClaimBtn.textContent = "Already claimed";
-    panelClaimBtn.disabled = true;
-    panelStatus.textContent = `Held by ${zone.owner}`;
+    panelStatus.textContent = `Held by ${zone.owner}.`;
+  }
+
+  const loggedIn = Auth.isLoggedIn();
+  submitInput.disabled = !loggedIn;
+  submitBtn.disabled = !loggedIn;
+  submitStatus.textContent = loggedIn ? "" : "Log in to submit a photo.";
+}
+
+// Builds one <li> for the submissions gallery. `isLeading` (the first item
+// in an already vote-sorted list) gets a highlighted style so it's obvious
+// at a glance which photo currently holds the zone.
+function submissionItemHTML(sub, isLeading) {
+  const classes = ["turf-submission"];
+  if (isLeading) classes.push("turf-submission--leading");
+
+  const mine = sub.username === Auth.getUsername();
+  const loggedIn = Auth.isLoggedIn();
+  const voteDisabled = !loggedIn || mine;
+  const voteTitle = mine
+    ? "You can't vote for your own photo"
+    : !loggedIn
+    ? "Log in to vote"
+    : sub.votedByMe
+    ? "Remove your vote"
+    : "Vote for this photo";
+
+  return `
+    <li class="${classes.join(" ")}">
+      <img class="turf-submission-photo" src="${sub.photoUrl}" alt="Photo by ${sub.username}" />
+      <div class="turf-submission-info">
+        <span class="turf-submission-user">${sub.username}</span>
+        <button
+          class="turf-submission-vote${sub.votedByMe ? " turf-submission-vote--active" : ""}"
+          data-submission-id="${sub.id}"
+          ${voteDisabled ? "disabled" : ""}
+          title="${voteTitle}"
+        >${sub.votedByMe ? "♥" : "♡"} ${sub.voteCount}</button>
+      </div>
+    </li>
+  `;
+}
+
+async function loadSubmissions(zoneId) {
+  submissionsList.innerHTML = '<li class="turf-submissions-empty">Loading…</li>';
+  try {
+    const subs = await api(`/api/zones/${zoneId}/submissions`, { auth: true });
+    if (subs.length === 0) {
+      submissionsList.innerHTML =
+        '<li class="turf-submissions-empty">No photos yet — be the first!</li>';
+      return;
+    }
+    // The backend already sorts by vote count, so index 0 is the leader.
+    submissionsList.innerHTML = subs
+      .map((sub, index) => submissionItemHTML(sub, index === 0))
+      .join("");
+  } catch (err) {
+    submissionsList.innerHTML = `<li class="turf-submissions-empty">${err.message}</li>`;
   }
 }
 
-panelCloseBtn.addEventListener("click", closePanel);
+// Voting: one click handler on the list itself (event delegation), since
+// every row gets replaced wholesale each time loadSubmissions() runs.
+submissionsList.addEventListener("click", async (event) => {
+  const button = event.target.closest(".turf-submission-vote");
+  if (!button || button.disabled || !activeZoneId) return;
 
-panelClaimBtn.addEventListener("click", async () => {
-  if (!activeZoneId || !Auth.isLoggedIn()) return;
-  const { zone } = zones[activeZoneId];
-
-  panelClaimBtn.disabled = true;
-  panelStatus.textContent = "Working…";
+  const submissionId = button.dataset.submissionId;
+  const zoneId = activeZoneId;
+  button.disabled = true;
 
   try {
-    const updated =
-      zone.owner === Auth.getUsername()
-        ? await api(`/api/zones/${zone.id}/claim`, { method: "DELETE", auth: true })
-        : await api(`/api/zones/${zone.id}/claim`, { method: "POST", auth: true });
-
-    renderZone(updated);
-    refreshPanel();
+    await api(`/api/submissions/${submissionId}/vote`, { method: "POST", auth: true });
+    await loadSubmissions(zoneId);
+    await refreshZone(zoneId);
   } catch (err) {
-    // Someone may have claimed it a moment before us — the error's zone
-    // data (if included) tells us who, so the panel shows the truth
-    // instead of a stale "Claim this turf" button.
-    panelStatus.textContent = err.message;
-    try {
-      const fresh = await api("/api/zones");
-      const freshZone = fresh.find((z) => z.id === zone.id);
-      if (freshZone) renderZone(freshZone);
-    } catch (_) {
-      /* best-effort refresh; the error message above is still shown */
-    }
-    refreshPanel();
+    submitStatus.textContent = err.message;
+    button.disabled = false;
   }
 });
 
+submitForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!activeZoneId || !Auth.isLoggedIn()) return;
+
+  const file = submitInput.files[0];
+  if (!file) {
+    submitStatus.textContent = "Choose a photo first.";
+    return;
+  }
+
+  const zoneId = activeZoneId;
+  const formData = new FormData();
+  formData.append("photo", file);
+
+  submitBtn.disabled = true;
+  submitStatus.textContent = "Uploading…";
+
+  try {
+    await api(`/api/zones/${zoneId}/submissions`, {
+      method: "POST",
+      body: formData,
+      auth: true,
+    });
+    submitForm.reset();
+    submitStatus.textContent = "Submitted!";
+    await loadSubmissions(zoneId);
+    await refreshZone(zoneId);
+  } catch (err) {
+    submitStatus.textContent = err.message;
+  } finally {
+    submitBtn.disabled = !Auth.isLoggedIn();
+  }
+});
+
+panelCloseBtn.addEventListener("click", closePanel);
+
 // Re-check ownership/marker colors whenever login state changes, and
-// refresh whatever the panel is currently showing.
+// refresh whatever the panel is currently showing (a vote button that was
+// disabled because you weren't logged in needs to become clickable the
+// moment you log in, for example).
 document.addEventListener("vantage:auth-changed", async () => {
   try {
     const zoneList = await api("/api/zones");
@@ -172,5 +260,8 @@ document.addEventListener("vantage:auth-changed", async () => {
   } catch (err) {
     console.error("Couldn't refresh turf zones:", err);
   }
-  if (activeZoneId) refreshPanel();
+  if (activeZoneId) {
+    refreshPanel();
+    loadSubmissions(activeZoneId);
+  }
 });

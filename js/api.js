@@ -28,9 +28,11 @@ const Auth = {
 };
 
 // api(path, { method, body, auth })
-//   path   e.g. "/api/zones" or "/api/zones/goose-creek-high-school/claim"
+//   path   e.g. "/api/zones" or "/api/zones/goose-creek-high-school/submissions"
 //   method defaults to "GET"
-//   body   a plain object; sent as JSON if provided
+//   body   a plain object (sent as JSON) OR a FormData (sent as-is, for
+//          photo uploads) — either way, just pass it and this figures out
+//          which one it is.
 //   auth   pass true to attach "Authorization: Bearer <token>"
 //
 // Resolves with the parsed JSON body on success (2xx). On failure, rejects
@@ -38,8 +40,12 @@ const Auth = {
 // sent one (e.g. "Incorrect username or password."), so callers can show
 // it directly to the user.
 async function api(path, { method = "GET", body, auth = false } = {}) {
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+
   const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  // Don't set Content-Type for FormData — the browser sets it itself,
+  // including the multipart boundary string the server needs to parse it.
+  if (body !== undefined && !isFormData) headers["Content-Type"] = "application/json";
   if (auth) {
     const token = Auth.getToken();
     if (token) headers["Authorization"] = "Bearer " + token;
@@ -48,7 +54,7 @@ async function api(path, { method = "GET", body, auth = false } = {}) {
   const response = await fetch(path, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });
 
   // Every response from this API is JSON, success or failure, so this is

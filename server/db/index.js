@@ -85,6 +85,13 @@ if (!zoneColumns.includes("challenge_rotated_at")) {
 const insertZone = db.prepare(
   "INSERT OR IGNORE INTO zones (id, name, lat, lng, description) VALUES (?, ?, ?, ?, ?)"
 );
+// Keeps name/coords/description in sync with landmarks.js on every
+// startup — e.g. if you nudge a coordinate, this is what actually applies
+// that fix to a zone that was already seeded. It never touches claims,
+// submissions, or votes, so this is always safe to run.
+const updateZone = db.prepare(
+  "UPDATE zones SET name = ?, lat = ?, lng = ?, description = ? WHERE id = ?"
+);
 const insertChallenge = db.prepare(
   "INSERT OR IGNORE INTO zone_challenges (zone_id, position, prompt) VALUES (?, ?, ?)"
 );
@@ -95,6 +102,13 @@ for (const landmark of LANDMARKS) {
     landmark.coords[0],
     landmark.coords[1],
     landmark.description
+  );
+  updateZone.run(
+    landmark.name,
+    landmark.coords[0],
+    landmark.coords[1],
+    landmark.description,
+    landmark.id
   );
   (landmark.challenges || []).forEach((prompt, position) => {
     insertChallenge.run(landmark.id, position, prompt);
