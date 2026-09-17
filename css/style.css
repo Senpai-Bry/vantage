@@ -1,16 +1,17 @@
 /* style.css
-   Dark, neon-accented look for Vantage — meant to feel like a fog-of-war
-   exploration map rather than a standard business map embed. */
+   Dark theme, header, glowing turf markers, and the slide-up info panel. */
 
 :root {
-  --bg: #0b0e14;
-  --panel-bg: #12161f;
-  --neon: #39ff88;
-  --neon-dim: #1f8f52;
-  --gold: #ffc94d;
-  --gold-dim: #8f6a1f;
-  --text: #e7e9ee;
-  --text-dim: #9aa1b1;
+  --bg: #0b0d10;
+  --panel-bg: #14171c;
+  --text: #e8eaed;
+  --text-dim: #9aa1ab;
+  --accent-green: #35d07f;  /* unclaimed */
+  --accent-gold: #f4c542;   /* claimed */
+  --accent-blue: #4ea1ff;   /* claimed by you */
+  --border: #23272e;
+  --input-bg: #1b1f26;
+  --danger: #ff6b6b;
 }
 
 * {
@@ -23,145 +24,282 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Header                                                                  */
+/* ---------------------------------------------------------------------- */
+
 #app-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1000; /* above the Leaflet map */
-  padding: 14px 20px;
-  pointer-events: none; /* let clicks pass through to the map underneath */
+  padding: 0.75rem 1.25rem;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.25rem;
+}
+
+#app-header-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
 }
 
 #app-header h1 {
   margin: 0;
-  font-size: 1.6rem;
-  letter-spacing: 0.08em;
-  color: var(--neon);
-  text-shadow: 0 0 10px rgba(57, 255, 136, 0.6);
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
 }
 
 #app-header .tagline {
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 0.85rem;
   color: var(--text-dim);
 }
 
-#map {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+/* ---------------------------------------------------------------------- */
+/* Account panel                                                           */
+/* ---------------------------------------------------------------------- */
+
+#auth-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
 }
 
-/* Custom turf marker — a glowing dot instead of Leaflet's default pin */
+#auth-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+#auth-form input {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  width: 130px;
+}
+
+#auth-form input:focus {
+  outline: 1px solid var(--accent-blue);
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.auth-buttons button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#auth-login-btn {
+  background: var(--accent-blue);
+  color: #06172b;
+}
+
+#auth-signup-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+#auth-login-btn:hover,
+#auth-signup-btn:hover {
+  filter: brightness(1.1);
+}
+
+#auth-logged-in {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+#auth-logged-in.hidden,
+#auth-logged-out.hidden {
+  display: none;
+}
+
+#auth-username-display {
+  color: var(--text-dim);
+}
+
+#auth-logout-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+#auth-logout-btn:hover {
+  filter: brightness(1.2);
+}
+
+#auth-error {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--danger);
+  min-height: 1em;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Map                                                                     */
+/* ---------------------------------------------------------------------- */
+
+#map {
+  position: relative;
+  flex: 1;
+  min-height: 0; /* let flexbox shrink this instead of overflowing */
+  background: var(--bg);
+}
+
+/* Turf markers: a small glowing dot rather than Leaflet's default pin.
+   Color and glow shift from green (unclaimed) to gold (claimed). */
+
 .turf-marker {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--neon);
-  box-shadow: 0 0 6px 2px rgba(57, 255, 136, 0.9);
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: var(--accent-green);
+  box-shadow: 0 0 6px 3px rgba(53, 208, 127, 0.65);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Claimed turf glows gold instead of green */
-.turf-marker.turf-marker--claimed {
-  background: var(--gold);
-  box-shadow: 0 0 8px 3px rgba(255, 201, 77, 0.9);
+.turf-marker--claimed {
+  background: var(--accent-gold);
+  box-shadow: 0 0 8px 4px rgba(244, 197, 66, 0.75);
 }
 
-/* Info panel for the selected turf zone */
+/* Turf you personally hold gets a blue ring on top of the gold glow, so
+   your own turf stands out from turf other players hold. */
+.turf-marker--mine {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(78, 161, 255, 0.55), 0 0 8px 4px rgba(244, 197, 66, 0.75);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Info panel                                                              */
+/* ---------------------------------------------------------------------- */
+
 #turf-panel {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
-  max-width: 360px;
-  z-index: 1000;
+  z-index: 1000; /* above Leaflet's own panes */
+  left: 1rem;
+  bottom: 1rem;
+  width: min(320px, calc(100vw - 2rem));
   background: var(--panel-bg);
-  border: 1px solid var(--neon-dim);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 16px 18px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 #turf-panel.hidden {
+  transform: translateY(12px);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(8px);
-}
-
-#turf-panel h2 {
-  margin: 0 0 6px;
-  font-size: 1.1rem;
-  color: var(--neon);
-}
-
-#turf-panel p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-dim);
-  line-height: 1.4;
-}
-
-#turf-panel-claim {
-  margin-top: 14px;
-  width: 100%;
-  padding: 9px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--neon-dim);
-  background: transparent;
-  color: var(--neon);
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-#turf-panel-claim:hover {
-  background: rgba(57, 255, 136, 0.12);
-}
-
-#turf-panel-claim.claimed {
-  border-color: var(--gold-dim);
-  color: var(--gold);
-}
-
-#turf-panel-claim.claimed:hover {
-  background: rgba(255, 201, 77, 0.12);
-}
-
-#turf-panel-status {
-  margin-top: 8px;
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  opacity: 0.8;
 }
 
 #turf-panel-close {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 0.5rem;
+  right: 0.6rem;
   background: none;
   border: none;
   color: var(--text-dim);
   font-size: 1.2rem;
-  cursor: pointer;
   line-height: 1;
+  cursor: pointer;
 }
 
 #turf-panel-close:hover {
   color: var(--text);
 }
 
-@media (min-width: 600px) {
-  #turf-panel {
-    left: 20px;
-    right: auto;
+#turf-panel-title {
+  margin: 0 1.5rem 0.4rem 0;
+  font-size: 1.1rem;
+}
+
+#turf-panel-desc {
+  margin: 0 0 0.9rem 0;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+#turf-panel-claim {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-green);
+  color: #06210f;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#turf-panel-claim:hover {
+  filter: brightness(1.08);
+}
+
+#turf-panel-claim:disabled {
+  background: var(--border);
+  color: var(--text-dim);
+  cursor: not-allowed;
+  filter: none;
+}
+
+#turf-panel-status {
+  margin: 0.6rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Small screens                                                           */
+/* ---------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  #auth-panel {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  #auth-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #auth-form input {
+    width: 100%;
   }
 }

@@ -18,8 +18,44 @@
 <body>
 
   <header id="app-header">
-    <h1>Vantage</h1>
-    <p class="tagline">Claim your city. One photo at a time.</p>
+    <div id="app-header-title">
+      <h1>Vantage</h1>
+      <p class="tagline">Claim your city. One photo at a time.</p>
+    </div>
+
+    <!-- Account panel: sign up / log in when logged out, a "who am I,
+         log out" strip when logged in. app.js swaps which half shows. -->
+    <div id="auth-panel">
+      <div id="auth-logged-out">
+        <form id="auth-form" autocomplete="on">
+          <input
+            type="text"
+            id="auth-username"
+            placeholder="Username"
+            autocomplete="username"
+            required
+          />
+          <input
+            type="password"
+            id="auth-password"
+            placeholder="Password"
+            autocomplete="current-password"
+            required
+          />
+          <div class="auth-buttons">
+            <button type="submit" id="auth-login-btn">Log in</button>
+            <button type="button" id="auth-signup-btn">Sign up</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="auth-logged-in" class="hidden">
+        <span id="auth-username-display"></span>
+        <button id="auth-logout-btn">Log out</button>
+      </div>
+
+      <p id="auth-error"></p>
+    </div>
   </header>
 
   <!-- Leaflet draws the map into this div -->
@@ -41,7 +77,8 @@
     crossorigin=""
   ></script>
 
-  <script src="js/landmarks.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
