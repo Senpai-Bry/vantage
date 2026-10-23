@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vantage</title>
 
+  <!-- Fonts: Plus Jakarta Sans (body), Bricolage Grotesque (condensed
+       display type for names, headings and scores), JetBrains Mono (the
+       film-edge captions and small labels). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+  />
+
   <!-- Leaflet's CSS (needed before our own stylesheet) -->
   <link
     rel="stylesheet"
@@ -18,82 +28,152 @@
 <body>
 
   <header id="app-header">
-    <div id="app-header-title">
-      <h1>Vantage</h1>
-      <p class="tagline">Claim your city. One photo at a time.</p>
+    <div class="brand">
+      <!-- The logo: a lens inside viewfinder crop marks. -->
+      <svg class="brand-logo" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M3 11V3h8" /><path d="M21 3h8v8" /><path d="M29 21v8h-8" /><path d="M11 29H3v-8" />
+        <circle cx="16" cy="16" r="6" />
+      </svg>
+      <h1 class="brand-wordmark">Vantage</h1>
+      <span class="brand-divider" aria-hidden="true"></span>
+      <p class="brand-tagline">Claim your city. One photo at a time.</p>
     </div>
-    <button id="leaderboard-btn" type="button">🏆 Leaderboard</button>
-    <!-- Account panel: sign up / log in when logged out, a "who am I,
-         log out" strip when logged in. app.js swaps which half shows. -->
-    <div id="auth-panel">
-      <div id="auth-logged-out">
-        <form id="auth-form" autocomplete="on">
-          <input
-            type="text"
-            id="auth-username"
-            placeholder="Username"
-            autocomplete="username"
-            required
-          />
-          <input
-            type="password"
-            id="auth-password"
-            placeholder="Password"
-            autocomplete="current-password"
-            required
-          />
-          <div class="auth-buttons">
-            <button type="submit" id="auth-login-btn">Log in</button>
-            <button type="button" id="auth-signup-btn">Sign up</button>
-          </div>
-        </form>
+
+    <div class="header-actions">
+      <button id="leaderboard-btn" class="pill-btn" type="button" aria-label="Leaderboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        <span class="pill-btn-label">Leaderboard</span>
+      </button>
+
+      <!-- Logged out: two buttons that open the log in / sign up window. -->
+      <div id="auth-logged-out" class="auth-buttons">
+        <button id="auth-open-login" class="text-btn" type="button">Log in</button>
+        <button id="auth-open-signup" class="primary-btn primary-btn--pill" type="button">Sign up</button>
       </div>
 
-      <div id="auth-logged-in" class="hidden">
-        <span id="auth-username-display"></span>
-        <button id="auth-logout-btn">Log out</button>
+      <!-- Logged in: an account pill that opens a small menu. -->
+      <div id="auth-logged-in" class="account hidden">
+        <button id="account-btn" class="account-btn" type="button" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+          <span id="account-avatar" class="avatar avatar--me"></span>
+        </button>
+        <div id="account-menu" class="account-menu hidden">
+          <p class="account-menu-label">Signed in as</p>
+          <p id="auth-username-display" class="account-menu-name"></p>
+          <button id="auth-logout-btn" class="account-menu-item" type="button">Log out</button>
+        </div>
       </div>
-
-      <p id="auth-error"></p>
     </div>
   </header>
 
-  <!-- Leaflet draws the map into this div -->
-  <div id="map"></div>
+  <main id="map-wrap">
+    <!-- Leaflet draws the map into this div -->
+    <div id="map"></div>
+
+    <!-- What the three kinds of turf look like on the map. -->
+    <div id="map-legend" aria-label="Map legend">
+      <span class="legend-item"><span class="legend-swatch legend-swatch--open"></span>Open turf</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch--held"></span>Held</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch--mine"></span>Your turf</span>
+    </div>
+  </main>
 
   <!-- Info panel for whichever turf zone is selected: its challenge, who
-       holds it, a form to submit a photo, and the gallery of everyone
-       else's submissions (with vote buttons). -->
-  <aside id="turf-panel" class="hidden">
-    <button id="turf-panel-close" aria-label="Close">&times;</button>
-    <h2 id="turf-panel-title">Zone name</h2>
-    <p id="turf-panel-desc">Zone description</p>
+       holds it, a form to submit a photo, and the gallery of everyone's
+       submissions (with vote buttons). -->
+  <aside id="turf-panel" class="panel hidden" aria-labelledby="turf-panel-title">
+    <button id="turf-panel-close" class="close-btn" type="button" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
 
-    <p id="turf-panel-challenge"></p>
-    <p id="turf-panel-status"></p>
+    <div class="panel-head">
+      <p id="turf-panel-status" class="eyebrow"></p>
+      <h2 id="turf-panel-title" class="display-title">Zone name</h2>
+      <p id="turf-panel-desc" class="panel-desc">Zone description</p>
+    </div>
+
+    <div id="turf-panel-challenge-box" class="challenge-box">
+      <span class="mono-label">Current challenge</span>
+      <p id="turf-panel-challenge"></p>
+    </div>
 
     <form id="turf-submit-form">
-      <input
-        type="file"
-        id="turf-submit-input"
-        accept="image/*"
-        capture="environment"
-        required
-      />
-      <button type="submit" id="turf-submit-btn">Submit photo</button>
+      <label class="upload-drop" for="turf-submit-input">
+        <span class="upload-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        </span>
+        <span class="upload-text">
+          <span id="turf-submit-filename" class="upload-title">Choose a photo</span>
+          <span class="upload-hint">Take one now or pick from your camera roll</span>
+        </span>
+        <input
+          type="file"
+          id="turf-submit-input"
+          class="visually-hidden"
+          accept="image/*"
+          capture="environment"
+        />
+      </label>
+      <button type="submit" id="turf-submit-btn" class="primary-btn">Submit photo</button>
     </form>
-    <p id="turf-submit-status"></p>
 
+    <!-- Shown instead of the form when nobody is logged in. -->
+    <div id="turf-login-prompt" class="login-prompt hidden">
+      <span>Log in to submit a photo.</span>
+      <button id="turf-login-btn" class="outline-btn" type="button">Log in</button>
+    </div>
+
+    <p id="turf-submit-status" class="status-line"></p>
+
+    <div class="section-head">
+      <h3 class="display-subtitle">Submissions</h3>
+      <span id="turf-submissions-count" class="mono-label mono-label--dim"></span>
+    </div>
     <ul id="turf-submissions-list"></ul>
   </aside>
+
   <!-- Leaderboard: players ranked by score. Filled in by leaderboard.js
        every time it's opened, so the scores are always fresh. -->
-  <aside id="leaderboard-panel" class="hidden">
-    <button id="leaderboard-close" aria-label="Close">&times;</button>
-    <h2>Leaderboard</h2>
-    <p class="leaderboard-legend">10 pts per zone held · 1 pt per vote</p>
+  <aside id="leaderboard-panel" class="panel hidden" aria-labelledby="leaderboard-title">
+    <button id="leaderboard-close" class="close-btn" type="button" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+    <div class="panel-head">
+      <h2 id="leaderboard-title" class="display-title">Leaderboard</h2>
+      <p class="mono-label mono-label--dim">10 pts / zone · 1 pt / vote</p>
+    </div>
     <ol id="leaderboard-list"></ol>
   </aside>
+
+  <!-- Log in / sign up window. auth.js switches it between the two modes. -->
+  <div id="auth-modal" class="modal-backdrop hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <button id="auth-modal-close" class="close-btn" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <h2 id="auth-modal-title" class="display-title">Log in</h2>
+      <p id="auth-modal-subtitle" class="panel-desc">Welcome back. Your turf missed you.</p>
+
+      <form id="auth-form" autocomplete="on">
+        <label class="field">
+          <span class="field-label">Username</span>
+          <input type="text" id="auth-username" autocomplete="username" required />
+        </label>
+        <label class="field">
+          <span class="field-label">Password</span>
+          <input type="password" id="auth-password" autocomplete="current-password" required />
+        </label>
+        <p id="auth-error" class="error-line" role="alert"></p>
+        <button type="submit" id="auth-submit-btn" class="primary-btn">Log in</button>
+      </form>
+
+      <p class="modal-switch">
+        <span id="auth-switch-text">New to Vantage?</span>
+        <button id="auth-switch-btn" class="link-btn" type="button">Sign up</button>
+      </p>
+    </div>
+  </div>
+
   <!-- Leaflet's JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -104,6 +184,6 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
-    <script src="js/leaderboard.js"></script>
+  <script src="js/leaderboard.js"></script>
 </body>
 </html>

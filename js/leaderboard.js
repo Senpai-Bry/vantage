@@ -2,17 +2,31 @@
 //
 // The leaderboard panel: opens from the header button, fetches
 // /api/leaderboard every time it opens, and draws one row per player.
+// Everything a player typed (their username) goes in with textContent,
+// never innerHTML, so it can't run as code.
 
 const leaderboardBtn = document.getElementById("leaderboard-btn");
 const leaderboardPanel = document.getElementById("leaderboard-panel");
 const leaderboardClose = document.getElementById("leaderboard-close");
 const leaderboardList = document.getElementById("leaderboard-list");
 
+// Small helper: make an element with a class and (optionally) some text.
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
 async function loadLeaderboard() {
   leaderboardList.textContent = "Loading…";
 
   try {
-    const result = await api("/api/leaderboard"); // BLANK 1
+    const result = await api("/api/leaderboard");
 
     leaderboardList.textContent = ""; // clear "Loading…"
 
@@ -21,35 +35,32 @@ async function loadLeaderboard() {
       return;
     }
 
-    for (const row of result.data) { // BLANK 2
-      const li = document.createElement("li");
-      li.className = "leaderboard-row";
-      if (row.username === Auth.getUsername()) { // BLANK 3
-        li.classList.add("leaderboard-row--me");
-      }
+    const me = Auth.getUsername();
 
-      const rank = document.createElement("span");
-      rank.className = "leaderboard-rank";
-      rank.textContent = "#" + row.rank;
+    for (const row of result.data) {
+      const isMe = row.username === me;
 
-      const player = document.createElement("div");
-      player.className = "leaderboard-player";
+      // Your own row gets viewfinder corners (the "vf" class).
+      const li = el("li", isMe ? "leaderboard-row leaderboard-row--me vf" : "leaderboard-row");
 
-      const name = document.createElement("span");
-      name.className = "leaderboard-name";
-      name.textContent = row.username;
+      const avatar = el("span", isMe ? "avatar avatar--me" : "avatar", row.username.charAt(0));
 
-      const stats = document.createElement("span");
-      stats.className = "leaderboard-stats";
-      stats.textContent = `${row.zones_held} zones · ${row.votes_received} votes`;
-
+      const player = el("div", "leaderboard-player");
+      const name = el("span", "leaderboard-name", row.username);
+      if (isMe) name.append(" ", el("span", "leaderboard-you", "(you)"));
+      const stats = el(
+        "span",
+        "film-caption",
+        `${plural(row.zones_held, "zone")} · ${plural(row.votes_received, "vote")}`
+      );
       player.append(name, stats);
 
-      const score = document.createElement("span");
-      score.className = "leaderboard-score";
-      score.textContent = row.score;
-
-      li.append(rank, player, score);
+      li.append(
+        el("span", "leaderboard-rank", String(row.rank)),
+        avatar,
+        player,
+        el("span", "leaderboard-score", String(row.score))
+      );
       leaderboardList.appendChild(li);
     }
   } catch (err) {
@@ -57,13 +68,29 @@ async function loadLeaderboard() {
   }
 }
 
+function openLeaderboard() {
+  // On a phone the panels are bottom sheets, so close the zone panel first.
+  if (isPhone.matches && activeZoneId) closePanel();
+  leaderboardPanel.classList.remove("hidden");
+  loadLeaderboard();
+}
+
+// Global on purpose: app.js calls this when a zone opens on a phone.
+function closeLeaderboard() {
+  leaderboardPanel.classList.add("hidden");
+}
+
 leaderboardBtn.addEventListener("click", () => {
-  leaderboardPanel.classList.toggle("hidden"); // BLANK 4
-  if (!leaderboardPanel.classList.contains("hidden")) {
-    loadLeaderboard();
+  if (leaderboardPanel.classList.contains("hidden")) {
+    openLeaderboard();
+  } else {
+    closeLeaderboard();
   }
 });
 
-leaderboardClose.addEventListener("click", () => {
-  leaderboardPanel.classList.add("hidden");
+leaderboardClose.addEventListener("click", closeLeaderboard);
+
+// If you log in or out while it's open, re-draw it so "(you)" moves.
+document.addEventListener("vantage:auth-changed", () => {
+  if (!leaderboardPanel.classList.contains("hidden")) loadLeaderboard();
 });

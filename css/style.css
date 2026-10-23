@@ -1,17 +1,41 @@
 /* style.css
-   Dark theme, header, glowing turf markers, and the slide-up info panel. */
+   Vantage v2: light and airy, one sunset-orange accent, and four brand
+   signatures — viewfinder corners, turf on the map, condensed display
+   type, and film-edge mono captions. */
 
 :root {
-  --bg: #0b0d10;
-  --panel-bg: #14171c;
-  --text: #e8eaed;
-  --text-dim: #9aa1ab;
-  --accent-green: #35d07f;  /* unclaimed */
-  --accent-gold: #f4c542;   /* claimed */
-  --accent-blue: #4ea1ff;   /* claimed by you */
-  --border: #23272e;
-  --input-bg: #1b1f26;
-  --danger: #ff6b6b;
+  /* Surfaces */
+  --map-bg: #edeeef;
+  --surface: #ffffff;
+  --surface-2: #f7f7f7;
+  --border: #ebebeb;
+  --border-strong: #dddddd;
+
+  /* Text */
+  --text: #222222;
+  --text-dim: #6a6a6a;
+
+  /* Sunset orange. --accent is deep enough to carry white text and to
+     be read as text itself; --accent-bright is for marks and glows. */
+  --accent: #c8430e;
+  --accent-hover: #a93709;
+  --accent-bright: #f2711c;
+  --accent-soft: #fff4ec;
+
+  /* Turf states */
+  --held: #222222;
+  --open-ring: #717171;
+
+  --danger: #c62828;
+
+  /* Type */
+  --font-body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --radius: 16px;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --header-h: 72px;
 }
 
 * {
@@ -22,9 +46,10 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--bg);
+  background: var(--map-bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
@@ -32,13 +57,262 @@ body {
   flex-direction: column;
 }
 
-/* A small generic utility for "hide this completely" — used by the
-   submit form. (#turf-panel and #auth-logged-in/out have their own more
-   specific .hidden rules below, which — being ID-scoped — always win over
-   this one regardless of source order, so adding this doesn't disturb
-   them.) */
+button {
+  font-family: inherit;
+}
+
+/* "Hide this completely." Used all over the page; JS adds/removes it. */
 .hidden {
   display: none !important;
+}
+
+/* Hidden from view but still usable (the real file input lives here —
+   the styled .upload-drop label is what people click). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Brand signature #1: viewfinder corners                                  */
+/* ---------------------------------------------------------------------- */
+/* Add class="vf" to anything and it gets four camera crop-mark corners
+   drawn just outside its edges. Set --vf-color to change their color
+   (orange = yours, charcoal = someone else's). They're drawn with eight
+   tiny gradient strips on one pseudo-element, so no extra HTML needed. */
+
+.vf {
+  position: relative;
+}
+
+.vf::after {
+  content: "";
+  position: absolute;
+  inset: var(--vf-inset, -5px);
+  pointer-events: none;
+  --c: var(--vf-color, var(--accent));
+  --l: var(--vf-len, 14px);
+  --t: var(--vf-thick, 2.5px);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) top left / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) top right / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) top right / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--t) var(--l),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--l) var(--t),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--t) var(--l);
+  background-repeat: no-repeat;
+}
+
+.vf--held {
+  --vf-color: var(--held);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Brand signatures #3 and #4: display type and mono labels                */
+/* ---------------------------------------------------------------------- */
+
+.display-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.display-subtitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.mono-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.mono-label--dim {
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+/* The status line above a zone's name: a dot plus "HELD BY YOU" etc. */
+.eyebrow {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.eyebrow::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--open-ring);
+}
+
+.eyebrow--held {
+  color: var(--text);
+}
+
+.eyebrow--held::before {
+  border: none;
+  background: var(--held);
+}
+
+.eyebrow--mine {
+  color: var(--accent);
+}
+
+.eyebrow--mine::before {
+  border: none;
+  background: var(--accent-bright);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Buttons                                                                 */
+/* ---------------------------------------------------------------------- */
+
+.primary-btn {
+  height: 48px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.primary-btn:hover {
+  background: var(--accent-hover);
+}
+
+.primary-btn:disabled {
+  background: var(--border-strong);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+.primary-btn--pill {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.outline-btn {
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--text);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.outline-btn:hover {
+  background: var(--surface-2);
+}
+
+.text-btn {
+  height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.text-btn:hover {
+  background: var(--surface-2);
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.pill-btn svg {
+  color: var(--accent);
+}
+
+.pill-btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-2);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  background: var(--border);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -46,409 +320,829 @@ body {
 /* ---------------------------------------------------------------------- */
 
 #app-header {
-  padding: 0.75rem 1.25rem;
-  background: var(--panel-bg);
+  position: relative;
+  z-index: 1100; /* above the map and its panels, so the account menu shows */
+  height: var(--header-h);
+  flex-shrink: 0;
+  padding: 0 32px;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.6rem 1.25rem;
+  gap: 16px;
 }
 
-#app-header-title {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-
-#app-header h1 {
-  margin: 0;
-  font-size: 1.4rem;
-  letter-spacing: 0.02em;
-}
-
-#app-header .tagline {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-dim);
-}
-
-/* ---------------------------------------------------------------------- */
-/* Account panel                                                           */
-/* ---------------------------------------------------------------------- */
-
-#auth-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.3rem;
-}
-
-#auth-form {
+.brand {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  gap: 14px;
+  min-width: 0;
 }
 
-#auth-form input {
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  padding: 0.4rem 0.6rem;
-  font-size: 0.85rem;
-  width: 130px;
+.brand-logo {
+  flex-shrink: 0;
 }
 
-#auth-form input:focus {
-  outline: 1px solid var(--accent-blue);
+.brand-logo path {
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-linecap: square;
+}
+
+.brand-logo circle {
+  fill: var(--accent-bright);
+}
+
+.brand-wordmark {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.brand-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-strong);
+}
+
+.brand-tagline {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .auth-buttons {
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 6px;
 }
 
-.auth-buttons button {
-  border: none;
-  border-radius: 6px;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
+/* Account pill + its dropdown menu */
+
+.account {
+  position: relative;
 }
 
-#auth-login-btn {
-  background: var(--accent-blue);
-  color: #06172b;
-}
-
-#auth-signup-btn {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-#auth-login-btn:hover,
-#auth-signup-btn:hover {
-  filter: brightness(1.1);
-}
-
-#auth-logged-in {
+.account-btn {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
+  gap: 10px;
+  height: 44px;
+  padding: 0 7px 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.15s ease;
 }
 
-#auth-logged-in.hidden,
-#auth-logged-out.hidden {
-  display: none;
+.account-btn:hover,
+.account-btn[aria-expanded="true"] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-#auth-username-display {
+.avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.avatar--me {
+  background: var(--accent-bright);
+  color: #ffffff;
+}
+
+.account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  padding: 8px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.account-menu-label {
+  margin: 0;
+  padding: 8px 12px 0;
+  font-size: 12px;
   color: var(--text-dim);
 }
 
-#auth-logout-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+.account-menu-name {
+  margin: 0;
+  padding: 2px 12px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-item {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
   color: var(--text);
-  padding: 0.35rem 0.6rem;
-  font-size: 0.8rem;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
   cursor: pointer;
 }
 
-#auth-logout-btn:hover {
-  filter: brightness(1.2);
-}
-
-#auth-error {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--danger);
-  min-height: 1em;
+.account-menu-item:hover {
+  background: var(--surface-2);
 }
 
 /* ---------------------------------------------------------------------- */
 /* Map                                                                     */
 /* ---------------------------------------------------------------------- */
 
-#map {
+#map-wrap {
   position: relative;
   flex: 1;
-  min-height: 0; /* let flexbox shrink this instead of overflowing */
-  background: var(--bg);
+  min-height: 0;
 }
 
-/* Turf markers: a small glowing dot rather than Leaflet's default pin.
-   Color and glow shift from green (unclaimed) to gold (claimed). */
+#map {
+  position: absolute;
+  inset: 0;
+  background: var(--map-bg);
+}
 
-.turf-marker {
+.leaflet-container {
+  font-family: var(--font-body);
+}
+
+.leaflet-bar {
+  border: none !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+}
+
+.leaflet-bar a {
+  width: 40px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  color: var(--text) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Brand signature #2: the legend for the turf circles. */
+#map-legend {
+  position: absolute;
+  z-index: 800;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.legend-swatch--open {
+  border: 1.5px dashed var(--open-ring);
+}
+
+.legend-swatch--held {
+  background: rgba(34, 34, 34, 0.18);
+  border: 1.5px solid rgba(34, 34, 34, 0.55);
+}
+
+.legend-swatch--mine {
+  background: rgba(242, 113, 28, 0.3);
+  border: 1.5px solid var(--accent-bright);
+}
+
+/* Markers: a small dot. White ring = open, charcoal = held, orange =
+   yours. The selected zone gets a bigger dot inside viewfinder corners,
+   plus its name on a label above. */
+
+.turf-pin {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.turf-pin-dot {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--accent-green);
-  box-shadow: 0 0 6px 3px rgba(53, 208, 127, 0.65);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  cursor: pointer;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  background: var(--surface);
+  border: 2.5px solid var(--open-ring);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  transition: transform 0.15s ease;
 }
 
-.turf-marker--claimed {
-  background: var(--accent-gold);
-  box-shadow: 0 0 8px 4px rgba(244, 197, 66, 0.75);
+.turf-pin:hover .turf-pin-dot {
+  transform: scale(1.15);
 }
 
-/* Turf you personally hold gets a blue ring on top of the gold glow, so
-   your own turf stands out from turf other players hold. */
-.turf-marker--mine {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(78, 161, 255, 0.55), 0 0 8px 4px rgba(244, 197, 66, 0.75);
+.turf-pin--held .turf-pin-dot {
+  background: var(--held);
+  border: 3px solid var(--surface);
 }
 
-/* ---------------------------------------------------------------------- */
-/* Info panel                                                              */
-/* ---------------------------------------------------------------------- */
+.turf-pin--mine .turf-pin-dot {
+  background: var(--accent-bright);
+  border: 3px solid var(--surface);
+}
 
-#turf-panel {
+.turf-pin--selected {
+  width: 56px;
+  height: 56px;
+  --vf-inset: 0px;
+  --vf-color: var(--text);
+}
+
+.turf-pin--selected.turf-pin--mine {
+  --vf-color: var(--accent);
+}
+
+.turf-pin--selected .turf-pin-dot {
+  width: 26px;
+  height: 26px;
+  border-width: 4px;
+}
+
+.turf-pin-label {
   position: absolute;
-  z-index: 1000; /* above Leaflet's own panes */
-  left: 1rem;
-  bottom: 1rem;
-  width: min(340px, calc(100vw - 2rem));
-  max-height: min(70vh, 560px);
-  display: flex;
-  flex-direction: column;
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem 1.1rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  transform: translateY(0);
-  opacity: 1;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-#turf-panel.hidden {
-  transform: translateY(12px);
-  opacity: 0;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--text);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   pointer-events: none;
 }
 
-#turf-panel-close {
+/* ---------------------------------------------------------------------- */
+/* Panels (zone + leaderboard share these)                                 */
+/* ---------------------------------------------------------------------- */
+
+.panel {
   position: absolute;
-  top: 0.5rem;
-  right: 0.6rem;
-  background: none;
-  border: none;
+  z-index: 1000; /* above Leaflet's own panes */
+  top: calc(var(--header-h) + 24px);
+  max-height: calc(100vh - var(--header-h) - 48px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 44px; /* room for the close button */
+}
+
+.panel-desc {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--text-dim);
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
 }
 
-#turf-panel-close:hover {
-  color: var(--text);
+#turf-panel {
+  left: 24px;
+  width: min(380px, calc(100vw - 48px));
 }
 
-#turf-panel-title {
-  margin: 0 1.5rem 0.4rem 0;
-  font-size: 1.1rem;
-  flex-shrink: 0;
+#leaderboard-panel {
+  right: 24px;
+  width: min(340px, calc(100vw - 48px));
 }
 
-#turf-panel-desc {
-  margin: 0 0 0.7rem 0;
-  font-size: 0.9rem;
-  color: var(--text-dim);
+.challenge-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--accent-soft);
+  border-radius: 12px;
+}
+
+.challenge-box p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
   line-height: 1.4;
-  flex-shrink: 0;
 }
 
-#turf-panel-challenge {
-  margin: 0 0 0.3rem 0;
-  font-size: 0.85rem;
-  font-style: italic;
-  color: var(--accent-gold);
-  flex-shrink: 0;
-}
-
-#turf-panel-status {
-  margin: 0 0 0.7rem 0;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-
-/* ---------------------------------------------------------------------- */
-/* Submit-a-photo form                                                     */
-/* ---------------------------------------------------------------------- */
+/* Submit-a-photo form */
 
 #turf-submit-form {
   display: flex;
-  gap: 0.4rem;
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 10px;
 }
 
-#turf-submit-input {
-  flex: 1;
-  min-width: 0; /* let a long filename shrink instead of overflowing */
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  padding: 0.4rem 0.5rem;
-  font-size: 0.78rem;
-}
-
-#turf-submit-input:disabled {
-  opacity: 0.5;
-}
-
-#turf-submit-btn {
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  background: var(--accent-green);
-  color: #06210f;
-  font-weight: 600;
-  font-size: 0.85rem;
+.upload-drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 12px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.2s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-#turf-submit-btn:hover {
-  filter: brightness(1.08);
+.upload-drop:hover {
+  border-color: var(--accent-bright);
+  background: var(--accent-soft);
 }
 
-#turf-submit-btn:disabled {
-  background: var(--border);
-  color: var(--text-dim);
-  cursor: not-allowed;
-  filter: none;
+.upload-drop:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-#turf-submit-status {
-  margin: 0.4rem 0 0.6rem 0;
-  font-size: 0.78rem;
-  color: var(--text-dim);
+.upload-drop--chosen {
+  border-style: solid;
+  border-color: var(--accent-bright);
+}
+
+.upload-icon {
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ---------------------------------------------------------------------- */
-/* Submissions gallery                                                     */
-/* ---------------------------------------------------------------------- */
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.upload-title {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.login-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.status-line {
+  margin: -6px 0 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.status-line:empty {
+  display: none;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+/* Submissions gallery: a two-column photo grid. */
 
 #turf-submissions-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 14px;
 }
 
 .turf-submissions-empty {
-  font-size: 0.82rem;
+  grid-column: 1 / -1;
+  padding: 12px 0;
+  font-size: 14px;
   color: var(--text-dim);
   text-align: center;
-  padding: 0.5rem 0;
 }
 
 .turf-submission {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
-/* The current vote leader — i.e. whoever holds the zone right now — gets
-   a gold outline so it's obvious at a glance which photo is "in the lead". */
-.turf-submission--leading {
-  border-color: var(--accent-gold);
-  box-shadow: 0 0 0 1px rgba(244, 197, 66, 0.35);
+.turf-submission-frame {
+  position: relative;
+  margin: 4px;
+  aspect-ratio: 4 / 3;
 }
 
 .turf-submission-photo {
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  flex-shrink: 0;
-  background: var(--input-bg);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.turf-submission-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--held);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.turf-submission--mine .turf-submission-badge {
+  background: var(--accent);
+}
+
+/* Brand signature #4: the film-edge caption under each photo. */
+.film-caption {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .turf-submission-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  flex: 1;
-  min-width: 0;
+  gap: 6px;
 }
 
 .turf-submission-user {
-  font-size: 0.82rem;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .turf-submission-vote {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text);
-  padding: 0.25rem 0.55rem;
-  font-size: 0.78rem;
-  cursor: pointer;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .turf-submission-vote:hover:not(:disabled) {
-  border-color: var(--accent-blue);
+  border-color: var(--accent-bright);
 }
 
 .turf-submission-vote--active {
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
+  border-color: var(--accent-bright);
+  color: var(--accent);
+}
+
+.turf-submission-vote--active svg {
+  fill: currentColor;
 }
 
 .turf-submission-vote:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Leaderboard                                                             */
+/* ---------------------------------------------------------------------- */
+
+#leaderboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: var(--text);
+}
+
+/* Your own row: soft orange plus viewfinder corners. */
+.leaderboard-row--me {
+  background: #fff8f3;
+  --vf-inset: -3px;
+  --vf-len: 12px;
+}
+
+.leaderboard-rank {
+  width: 24px;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+
+.leaderboard-row:first-child .leaderboard-rank {
+  color: var(--accent);
+}
+
+.leaderboard-player {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.leaderboard-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-you {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.leaderboard-score {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Log in / sign up window                                                 */
+/* ---------------------------------------------------------------------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(34, 34, 34, 0.45);
+}
+
+.modal {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 32px 28px 24px;
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.field input {
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.field input:focus {
+  outline: 2px solid var(--text);
+  outline-offset: -1px;
+}
+
+.error-line {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.error-line:empty {
+  display: none;
+}
+
+.modal-switch {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
 }
 
 /* ---------------------------------------------------------------------- */
 /* Small screens                                                           */
 /* ---------------------------------------------------------------------- */
 
-@media (max-width: 480px) {
-  #auth-panel {
-    align-items: stretch;
-    width: 100%;
+@media (max-width: 900px) {
+  .brand-divider,
+  .brand-tagline {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --header-h: 64px;
   }
 
-  #auth-form {
-    flex-direction: column;
-    align-items: stretch;
+  #app-header {
+    padding: 0 12px;
   }
 
-  #auth-form input {
-    width: 100%;
+  .brand {
+    gap: 10px;
   }
 
-  #turf-submit-form {
-    flex-direction: column;
+  .brand-wordmark {
+    font-size: 23px;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  /* Leaderboard becomes an icon-only round button. */
+  .pill-btn {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .pill-btn-label {
+    display: none;
+  }
+
+  /* Panels become bottom sheets. Only one is open at a time on a phone
+     (leaderboard.js and app.js close the other one). */
+  .panel {
+    top: auto;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0;
+    width: 100% !important;
+    max-height: 70vh;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 28px;
+  }
+
+  #map-legend {
+    bottom: 16px;
+    gap: 14px;
+    padding: 8px 14px;
+    font-size: 10px;
+  }
+
+  .display-title {
+    font-size: 30px;
   }
 }
