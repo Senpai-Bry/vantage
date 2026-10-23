@@ -141,6 +141,18 @@ function refreshPanel() {
   submitStatus.textContent = loggedIn ? "" : "Log in to submit a photo.";
 }
 
+// Makes text safe to put inside an HTML string: characters that would
+// start a tag or break out of an attribute are swapped for harmless
+// look-alikes. Use it on anything a player typed (usernames, etc).
+function escapeHTML(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 // Builds one <li> for the submissions gallery. `isLeading` (the first item
 // in an already vote-sorted list) gets a highlighted style so it's obvious
 // at a glance which photo currently holds the zone.
@@ -161,9 +173,9 @@ function submissionItemHTML(sub, isLeading) {
 
   return `
     <li class="${classes.join(" ")}">
-      <img class="turf-submission-photo" src="${sub.photoUrl}" alt="Photo by ${sub.username}" />
+      <img class="turf-submission-photo" src="${escapeHTML(sub.photoUrl)}" alt="Photo by ${escapeHTML(sub.username)}" />
       <div class="turf-submission-info">
-        <span class="turf-submission-user">${sub.username}</span>
+        <span class="turf-submission-user">${escapeHTML(sub.username)}</span>
         <button
           class="turf-submission-vote${sub.votedByMe ? " turf-submission-vote--active" : ""}"
           data-submission-id="${sub.id}"
@@ -189,7 +201,7 @@ async function loadSubmissions(zoneId) {
       .map((sub, index) => submissionItemHTML(sub, index === 0))
       .join("");
   } catch (err) {
-    submissionsList.innerHTML = `<li class="turf-submissions-empty">${err.message}</li>`;
+    submissionsList.innerHTML = `<li class="turf-submissions-empty">${escapeHTML(err.message)}</li>`;
   }
 }
 
