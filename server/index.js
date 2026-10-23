@@ -12,7 +12,7 @@ const config = require("./config");
 const authRouter = require("./routes/auth");
 const zonesRouter = require("./routes/zones");
 const submissionsRouter = require("./routes/submissions");
-
+const leaderboardRouter = require("./routes/leaderboard");
 const app = express();
 
 app.use(cors({ origin: config.clientOrigin }));
@@ -22,7 +22,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/zones", zonesRouter);
 // Adds POST/GET /api/zones/:id/submissions and POST /api/submissions/:id/vote.
 app.use("/api", submissionsRouter);
-
+app.use("/api/leaderboard", leaderboardRouter);
 // Uploaded photos, served as plain static files at /uploads/<filename>.
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
