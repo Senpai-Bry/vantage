@@ -4,7 +4,8 @@
   "description": "Vantage backend — accounts and shared turf claims, API + static file server.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "build-turf": "node scripts/build-turf.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

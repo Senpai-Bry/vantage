@@ -11,6 +11,16 @@ const { rotateDueChallenges, currentChallengePrompt } = require("../lib/challeng
 
 const router = express.Router();
 
+// Each zone's street-bounded turf border, made by scripts/build-turf.js
+// (run "npm run build-turf"). If that hasn't been run yet, or a zone has
+// no border, the map just falls back to a circle for that zone.
+let BOUNDARIES = {};
+try {
+  BOUNDARIES = require("../data/boundaries.json");
+} catch (_) {
+  console.log("No data/boundaries.json yet — run \"npm run build-turf\" to draw turf borders.");
+}
+
 // Whoever's photo has the most votes for a zone IS that zone's owner now —
 // there's no separate "claim" step anymore. Ties go to whoever submitted
 // first, so a brand new photo with zero votes doesn't tie its way into
@@ -44,6 +54,7 @@ function toZoneJSON(row) {
     name: row.name,
     coords: [row.lat, row.lng],
     description: row.description,
+    boundary: BOUNDARIES[row.id] || null,
     currentChallenge: currentChallengePrompt(row.id, row.current_challenge_index),
     owner: leader ? leader.username : null,
     claimedAt: leader ? leader.created_at : null,
