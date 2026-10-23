@@ -22,7 +22,7 @@
       <h1>Vantage</h1>
       <p class="tagline">Claim your city. One photo at a time.</p>
     </div>
-
+    <button id="leaderboard-btn" type="button">🏆 Leaderboard</button>
     <!-- Account panel: sign up / log in when logged out, a "who am I,
          log out" strip when logged in. app.js swaps which half shows. -->
     <div id="auth-panel">
@@ -86,7 +86,14 @@
 
     <ul id="turf-submissions-list"></ul>
   </aside>
-
+  <!-- Leaderboard: players ranked by score. Filled in by leaderboard.js
+       every time it's opened, so the scores are always fresh. -->
+  <aside id="leaderboard-panel" class="hidden">
+    <button id="leaderboard-close" aria-label="Close">&times;</button>
+    <h2>Leaderboard</h2>
+    <p class="leaderboard-legend">10 pts per zone held · 1 pt per vote</p>
+    <ol id="leaderboard-list"></ol>
+  </aside>
   <!-- Leaflet's JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -97,5 +104,6 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
+    <script src="js/leaderboard.js"></script>
 </body>
 </html>
