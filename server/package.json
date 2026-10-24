@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "fetch-osm": "node scripts/fetch-osm.js",
     "build-turf": "node scripts/build-turf.js"
   },
   "dependencies": {
@@ -15,5 +16,8 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0"
+  },
+  "devDependencies": {
+    "jsts": "^2.12.1"
   }
 }
