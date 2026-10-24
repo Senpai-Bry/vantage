@@ -105,6 +105,25 @@ the zone's current owner can release it — the server checks this and
 returns a 403 for anyone else, even if they somehow bypassed the disabled
 button.
 
+## Turf borders
+
+Each zone's turf on the map is a street-bounded shape: it ends at the
+nearest major roads, railroad tracks or shoreline, is never bigger than
+0.5 miles from the landmark, and zones that are close together split the
+ground between them along a shared border.
+
+The shapes are generated once from OpenStreetMap road data and saved to
+`server/data/boundaries.json`. To (re)build them, from the `server/`
+folder:
+
+```
+npm run build-turf                    # every zone
+npm run build-turf -- park-circle     # just one zone, by its id
+```
+
+Then restart the server. Run it again whenever you add or move a landmark.
+Zones without a border yet show a small circle instead.
+
 ## A note on coordinates
 
 The coordinates in `server/data/landmarks.js` are pulled from public

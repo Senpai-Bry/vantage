@@ -46,7 +46,10 @@ const SIMPLIFY_M = 6; // straight-line tolerance when tidying the outline
 // brackets if you want smaller zones cut by collector streets too.
 const MAJOR_ROADS = "^(motorway|trunk|primary|secondary)$";
 
+// The main server is tried twice as often as the backup mirror, since
+// it's usually the faster of the two.
 const OVERPASS_URLS = [
+  "https://overpass-api.de/api/interpreter",
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ];
@@ -183,6 +186,12 @@ function buildBoundary(landmark, barriers, neighbors) {
 
 function overpassQuery([lat, lng]) {
   const around = `around:${SEARCH_RADIUS_M},${lat},${lng}`;
+  // Only send back the parts of each road/shoreline inside this box.
+  // Without it, a zone next to a big river downloads the ENTIRE river's
+  // outline, which is huge and can take minutes.
+  const dLat = SEARCH_RADIUS_M / M_PER_DEG_LAT;
+  const dLng = SEARCH_RADIUS_M / mPerDegLng(lat);
+  const box = [lat - dLat, lng - dLng, lat + dLat, lng + dLng].map((n) => n.toFixed(6)).join(",");
   return `
     [out:json][timeout:60];
     (
@@ -192,7 +201,7 @@ function overpassQuery([lat, lng]) {
       way(${around})["waterway"="riverbank"];
       relation(${around})["natural"="water"];
     );
-    out geom;
+    out geom(${box});
   `;
 }
 
@@ -202,17 +211,33 @@ function kindOf(tags = {}) {
   return "water";
 }
 
+// Splits a geometry list into unbroken pieces. Because we ask for only the
+// part inside a box, points outside it can come back empty (null), which
+// breaks a line into separate stretches.
+function pieces(geometry) {
+  const result = [];
+  let current = [];
+  for (const g of geometry || []) {
+    if (g && typeof g.lat === "number") {
+      current.push([g.lat, g.lon]);
+    } else {
+      if (current.length >= 2) result.push(current);
+      current = [];
+    }
+  }
+  if (current.length >= 2) result.push(current);
+  return result;
+}
+
 // Turns Overpass's JSON into the simple barrier list buildBoundary wants.
 function toBarriers(osm) {
   const barriers = [];
   for (const el of osm.elements || []) {
-    if (el.type === "way" && el.geometry) {
-      barriers.push({ kind: kindOf(el.tags), line: el.geometry.map((g) => [g.lat, g.lon]) });
+    if (el.type === "way") {
+      for (const line of pieces(el.geometry)) barriers.push({ kind: kindOf(el.tags), line });
     } else if (el.type === "relation" && el.members) {
       for (const member of el.members) {
-        if (member.geometry) {
-          barriers.push({ kind: "water", line: member.geometry.map((g) => [g.lat, g.lon]) });
-        }
+        for (const line of pieces(member.geometry)) barriers.push({ kind: "water", line });
       }
     }
   }
@@ -236,12 +261,14 @@ async function fetchBarriers(coords) {
           "User-Agent": "Vantage turf builder (personal portfolio project)",
         },
         body,
+        signal: AbortSignal.timeout(75000), // give up on a stuck request
       });
       if (response.ok) return toBarriers(await response.json());
       lastError = new Error(`Overpass said ${response.status}`);
     } catch (err) {
       lastError = err;
     }
+    console.log(`   ...busy or slow (${lastError.message}), retrying in ${3 * (attempt + 1)}s`);
     await sleep(3000 * (attempt + 1));
   }
   throw lastError;
@@ -268,6 +295,7 @@ async function main() {
   let failed = 0;
   for (const [i, landmark] of targets.entries()) {
     const label = `[${i + 1}/${targets.length}] ${landmark.name}`;
+    console.log(`${label} — fetching roads...`);
     try {
       const barriers = await fetchBarriers(landmark.coords);
       boundaries[landmark.id] = buildBoundary(landmark, barriers, LANDMARKS);

@@ -34,24 +34,30 @@ L.tileLayer(
 ).addTo(map);
 
 // ---------------------------------------------------------------------------
-// 2. Turf circles + markers
+// 2. Turf borders + markers
 // ---------------------------------------------------------------------------
 // Every zone gets two things on the map:
-//   - a soft circle of "turf" around it, tinted by who holds it
+//   - its turf: the street-bounded border made by scripts/build-turf.js,
+//     tinted by who holds it (a small circle instead, if a zone has no
+//     border yet)
 //   - a small dot marker on top (a divIcon — plain HTML styled in CSS)
-// The circle is a circleMarker, so its radius is in screen pixels and it
-// stays the same size at every zoom level.
 
 const TURF_STYLES = {
-  open: { color: "#717171", weight: 1.5, opacity: 0.7, dashArray: "4 5", fillColor: "#717171", fillOpacity: 0 },
-  held: { color: "#222222", weight: 1.5, opacity: 0.35, fillColor: "#222222", fillOpacity: 0.08, dashArray: null },
-  mine: { color: "#F2711C", weight: 1.5, opacity: 0.6, fillColor: "#F2711C", fillOpacity: 0.16, dashArray: null },
+  open: { color: "#717171", weight: 1.5, opacity: 0.7, dashArray: "4 5", fillColor: "#717171", fillOpacity: 0.02 },
+  held: { color: "#222222", weight: 1.5, opacity: 0.4, fillColor: "#222222", fillOpacity: 0.08, dashArray: null },
+  mine: { color: "#F2711C", weight: 1.5, opacity: 0.7, fillColor: "#F2711C", fillOpacity: 0.16, dashArray: null },
 };
 
 // "open", "held" or "mine" — the one question every bit of styling asks.
 function turfState(zone) {
   if (!zone.owner) return "open";
   return zone.owner === Auth.getUsername() ? "mine" : "held";
+}
+
+// The selected zone's border gets drawn bolder so you can see its edges.
+function turfStyle(zone, selected) {
+  const style = TURF_STYLES[turfState(zone)];
+  return selected ? { ...style, weight: 3, opacity: 0.9 } : style;
 }
 
 function makeIcon(zone, selected) {
@@ -78,6 +84,14 @@ function makeIcon(zone, selected) {
 // just one zone without re-drawing all of them.
 const zones = {};
 
+function makeTurf(zone, selected) {
+  if (zone.boundary && zone.boundary.length >= 3) {
+    return L.polygon(zone.boundary, turfStyle(zone, selected));
+  }
+  // No border built for this zone yet: fall back to a small circle.
+  return L.circleMarker(zone.coords, { radius: 34, ...turfStyle(zone, selected) });
+}
+
 function renderZone(zone) {
   zones[zone.id] = { ...zones[zone.id], zone };
   const entry = zones[zone.id];
@@ -86,12 +100,10 @@ function renderZone(zone) {
   if (entry.marker) {
     entry.marker.setIcon(makeIcon(zone, selected));
     entry.marker.setZIndexOffset(selected ? 1000 : 0);
-    entry.turf.setStyle(TURF_STYLES[turfState(zone)]);
+    entry.turf.setStyle(turfStyle(zone, selected));
+    if (selected) entry.turf.bringToFront();
   } else {
-    entry.turf = L.circleMarker(zone.coords, {
-      radius: 34,
-      ...TURF_STYLES[turfState(zone)],
-    }).addTo(map);
+    entry.turf = makeTurf(zone, selected).addTo(map);
     entry.turf.on("click", () => openPanel(zone.id));
 
     entry.marker = L.marker(zone.coords, { icon: makeIcon(zone, selected) }).addTo(map);
