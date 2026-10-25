@@ -16,6 +16,11 @@ const config = {
   // list. 24 (hours) is the real setting; while testing locally, set this
   // to something tiny in your .env (e.g. 0.02, about a minute) so you don't
   // have to wait a full day to see a rotation happen.
+  // Geofence: when on, a photo is only accepted if the player's phone says
+  // they're inside the zone. Set GEOFENCE=off in .env to test from home
+  // (or keep it on and fake your location with Chrome DevTools — see README).
+  geofenceEnabled: (process.env.GEOFENCE || "on").toLowerCase() !== "off",
+
   challengeRotationMs:
     Number(process.env.CHALLENGE_ROTATION_HOURS || 24) * 60 * 60 * 1000,
 };

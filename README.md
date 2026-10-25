@@ -126,6 +126,26 @@ skips zones it already has, so after adding a landmark it only downloads
 the new one. `build-turf` writes `server/data/boundaries.json`, which is
 committed. Restart the server afterward to see the new borders.
 
+## Geofence (you have to be there)
+
+A photo only counts if it's submitted from inside the zone's turf border.
+When you hit "Submit photo", the browser asks for your location and sends
+it with the photo; the server checks it against the zone's border
+(`server/lib/geofence.js`) and turns the photo away if you're outside,
+with a message saying how far away you are. Zones without a border yet
+fall back to "within half a mile of the landmark".
+
+Testing from home:
+
+- **Fake your location (recommended):** in Chrome, open DevTools (F12),
+  press Ctrl + Shift + P, type "Sensors", and set a custom location to a
+  point inside a zone (right-click the spot on Google Maps to copy its
+  coordinates). Submitting then behaves as if you were standing there.
+- **Or switch it off:** set `GEOFENCE=off` in `server/.env` and restart.
+
+Browsers only share location on secure pages: `localhost` works, and so
+will an `https://` address once Vantage is deployed.
+
 ## A note on coordinates
 
 The coordinates in `server/data/landmarks.js` are pulled from public

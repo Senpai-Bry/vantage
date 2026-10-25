@@ -353,6 +353,26 @@ submissionsList.addEventListener("click", async (event) => {
   }
 });
 
+// Asks the browser for the phone's current GPS position. Wrapped in a
+// Promise so the submit code can simply "await" it. The browser shows its
+// own "Allow location?" prompt the first time.
+function getLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("This browser can't share your location, so photos can't be checked against the zone."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, (err) => {
+      const messages = {
+        1: "Vantage needs your location to check you're at this zone. Allow location access and try again.",
+        2: "Couldn't find your location. Check that location services are on, then try again.",
+        3: "Finding your location took too long. Try again — it's quicker outdoors.",
+      };
+      reject(new Error(messages[err.code] || "Couldn't get your location."));
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+  });
+}
+
 submitForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!activeZoneId || !Auth.isLoggedIn()) return;
@@ -364,13 +384,20 @@ submitForm.addEventListener("submit", async (event) => {
   }
 
   const zoneId = activeZoneId;
-  const formData = new FormData();
-  formData.append("photo", file);
-
   submitBtn.disabled = true;
-  submitStatus.textContent = "Uploading…";
 
   try {
+    // Geofence: the server only accepts the photo if you're inside the
+    // zone, so send along where your phone says you are.
+    submitStatus.textContent = "Checking your location…";
+    const position = await getLocation();
+
+    const formData = new FormData();
+    formData.append("lat", position.coords.latitude);
+    formData.append("lng", position.coords.longitude);
+    formData.append("photo", file);
+
+    submitStatus.textContent = "Uploading…";
     await api(`/api/zones/${zoneId}/submissions`, {
       method: "POST",
       body: formData,

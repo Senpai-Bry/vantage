@@ -13,6 +13,7 @@ const jwt = require("jsonwebtoken");
 const db = require("../db");
 const config = require("../config");
 const requireAuth = require("../middleware/auth");
+const { checkPosition, describeDistance } = require("../lib/geofence");
 
 const router = express.Router();
 
@@ -111,11 +112,31 @@ router.post("/zones/:id/submissions", requireAuth, (req, res) => {
     }
 
     const zone = db
-      .prepare("SELECT id, current_challenge_index FROM zones WHERE id = ?")
+      .prepare("SELECT id, name, lat, lng, current_challenge_index FROM zones WHERE id = ?")
       .get(req.params.id);
     if (!zone) {
       fs.unlink(req.file.path, () => {});
       return res.status(404).json({ error: "No such zone." });
+    }
+
+    // Geofence: the photo only counts if it was sent from inside the zone.
+    // The phone's location arrives as two extra form fields, lat and lng.
+    if (config.geofenceEnabled) {
+      const lat = Number(req.body.lat);
+      const lng = Number(req.body.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+        fs.unlink(req.file.path, () => {});
+        return res.status(400).json({
+          error: "Vantage needs your location to check you're at this zone. Allow location access and try again.",
+        });
+      }
+      const { inside, distanceM } = checkPosition(zone, [lat, lng]);
+      if (!inside) {
+        fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: `You need to be inside ${zone.name}'s turf to submit here. You're ${describeDistance(distanceM)} away.`,
+        });
+      }
     }
 
     const photoPath = `/uploads/${req.file.filename}`;
