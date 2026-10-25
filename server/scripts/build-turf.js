@@ -28,7 +28,7 @@ const LANDMARKS = require("../data/landmarks");
 
 const ZONE_RADIUS_M = 805; // 0.5 miles: how far a block's middle may be
 const MAX_BLOCK_REACH_M = 1300; // blocks reaching further than this are too big to use whole
-const SIMPLIFY_M = 4; // straight-line tolerance when tidying the outline
+const SIMPLIFY_M = 10; // straight-line tolerance when tidying the outline (also calms wiggly creek edges)
 // Big roads end turf: a zone stays on its landmark's side of the major
 // roads, railroad tracks and water around it. If that leaves a zone too
 // small (a landmark squeezed against a highway), it's allowed to cross.
@@ -37,14 +37,14 @@ const MIN_ZONE_AREA_M2 = 200000; // about 0.08 square miles
 const FENCE_M = 1350; // just inside the 1400 m area fetch-osm downloads
 // Slivers thinner than this (the strip between two lanes of a divided
 // highway, a long thin tail along a road) get trimmed off a zone.
-const MIN_WIDTH_M = 30;
+const MIN_WIDTH_M = 50;
 const IGNORE_NEAR_M = 60;
 // A block must have at least this much street along its edge. Areas
 // bounded only by shoreline (the middle of a river, a marsh) don't count.
 const MIN_STREET_EDGE_M = 40;
 // When an oversized block gets trimmed to its streets, keep this much
 // ground around them.
-const STREET_PADDING_M = 120;
+const STREET_PADDING_M = 100;
 const MIN_TRIM_AREA_M2 = 20000; // trimmed pieces smaller than this are dropped // a big road this close to the landmark is "its" road, not a limit
 
 const CACHE_DIR = path.join(__dirname, "..", "data", "osm-cache");
@@ -295,7 +295,7 @@ function buildZone(landmark, osm) {
       const ours = ownerOf(block, center) === landmark.id;
       const notHuge = reachOf(block, lx, ly) <= MAX_BLOCK_REACH_M;
       const sameSide =
-        !stayInsideBigRoads || (homeTurf ? homeTurf.contains(centerPoint) : !acrossBigRoad(center));
+        !stayInsideBigRoads || ((!homeTurf || homeTurf.contains(centerPoint)) && !acrossBigRoad(center));
 
       if (block.distance(landmarkPoint) < 1 && (!homeBlock || block.getArea() < homeBlock.getArea())) {
         homeBlock = block;
@@ -317,7 +317,7 @@ function buildZone(landmark, osm) {
       const centerPoint = part.getInteriorPoint();
       const center = centerPoint.getCoordinate();
       const sameSide =
-        !stayInsideBigRoads || (homeTurf ? homeTurf.contains(centerPoint) : !acrossBigRoad(center));
+        !stayInsideBigRoads || ((!homeTurf || homeTurf.contains(centerPoint)) && !acrossBigRoad(center));
       if (Math.hypot(center.x - lx, center.y - ly) <= ZONE_RADIUS_M && sameSide) mine.push(part);
     }
 
@@ -357,9 +357,9 @@ function buildZone(landmark, osm) {
     myGround = myGround.intersection(half);
   }
 
-  // Shrinks an oversized block (a subdivision of dead-end streets, a
-  // plantation, a base) to the area its own streets cover: the outline
-  // wrapped around the streets inside it near this landmark.
+  // Shrinks an oversized block (a plantation, a base, a marsh-edge
+  // subdivision) to the part its own streets cover: the outline wrapped
+  // around the streets inside it near this landmark, plus a little room.
   function trimBigBlock(block, isHome) {
     const reach = landmarkPoint.buffer(ZONE_RADIUS_M, 24).intersection(myGround);
     let inner = streets.intersection(block.buffer(-1)).intersection(reach);
@@ -373,7 +373,7 @@ function buildZone(landmark, osm) {
     // be more than a sliver).
     const minArea = isHome ? MIN_ZONE_AREA_M2 : MIN_TRIM_AREA_M2;
     for (const padding of [STREET_PADDING_M, STREET_PADDING_M * 2, STREET_PADDING_M * 3.5]) {
-      const trimmed = block.intersection(hull.buffer(padding, 4)).intersection(reach);
+      const trimmed = block.intersection(hull.buffer(padding, 2)).intersection(myGround);
       if (trimmed.getArea() >= minArea) return trimmed;
     }
     return isHome ? block.intersection(reach) : null;
@@ -400,6 +400,43 @@ function buildZone(landmark, osm) {
   const ring = zone.getExteriorRing().getCoordinates();
   // Leaflet closes the shape itself, so drop the repeated last point.
   return ring.slice(0, -1).map((c) => toLatLng(c.x, c.y));
+}
+
+// Tidying each zone's outline can nudge a shared border by a few meters,
+// leaving tiny slivers where two neighbors overlap. Give each sliver to
+// whichever of the two landmarks is closer to it.
+function removeOverlaps(boundaries) {
+  const toPolygon = (outline) => {
+    const ring = outline.map((p) => coord(p));
+    ring.push(ring[0]);
+    return factory.createPolygon(ring).buffer(0);
+  };
+  const ids = Object.keys(boundaries);
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = toPolygon(boundaries[ids[i]]);
+      const b = toPolygon(boundaries[ids[j]]);
+      if (!a.getEnvelopeInternal().intersects(b.getEnvelopeInternal())) continue;
+      const overlap = a.intersection(b);
+      if (overlap.getArea() < 1) continue;
+
+      const c = overlap.getCentroid().getCoordinate();
+      const dist = (id) => {
+        const [x, y] = toXY(LANDMARKS.find((l) => l.id === id).coords);
+        return Math.hypot(x - c.x, y - c.y);
+      };
+      const loser = dist(ids[i]) <= dist(ids[j]) ? ids[j] : ids[i];
+      const loserLandmark = LANDMARKS.find((l) => l.id === loser);
+      const [lx, ly] = toXY(loserLandmark.coords);
+      const trimmed = mainOutline(
+        (loser === ids[i] ? a : b).difference(overlap.buffer(0.5)),
+        factory.createPoint(new jsts.geom.Coordinate(lx, ly))
+      );
+      if (trimmed) {
+        boundaries[loser] = trimmed.getExteriorRing().getCoordinates().slice(0, -1).map((k) => toLatLng(k.x, k.y));
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -438,6 +475,7 @@ function main() {
     }
   }
 
+  removeOverlaps(boundaries);
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(boundaries) + "\n");
   console.log(
     failed

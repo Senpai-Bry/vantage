@@ -8,3 +8,6 @@ server/db/*.db-shm
 server/db/*.db-wal
 server/uploads/*
 !server/uploads/.gitkeep
+
+# Raw OpenStreetMap downloads used to build turf borders (re-download with npm run fetch-osm)
+server/data/osm-cache/

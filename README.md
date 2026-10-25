@@ -107,22 +107,24 @@ button.
 
 ## Turf borders
 
-Each zone's turf on the map is a street-bounded shape: it ends at the
-nearest major roads, railroad tracks or shoreline, is never bigger than
-0.5 miles from the landmark, and zones that are close together split the
-ground between them along a shared border.
+Each zone's turf on the map is made of real city blocks: every edge runs
+along a street, railroad track or shoreline. A block belongs to a zone if
+its middle is within 0.5 miles of that zone's landmark and that landmark
+is the closest one to it, so neighboring zones share borders along streets
+instead of overlapping. Zones also stay on their landmark's side of the
+big roads around it.
 
-The shapes are generated once from OpenStreetMap road data and saved to
-`server/data/boundaries.json`. To (re)build them, from the `server/`
-folder:
+Building them takes two steps, from the `server/` folder:
 
 ```
-npm run build-turf                    # every zone
-npm run build-turf -- park-circle     # just one zone, by its id
+npm run fetch-osm      # download the street maps (needs internet, ~10 min the first time)
+npm run build-turf     # draw the borders from them (offline, a few seconds)
 ```
 
-Then restart the server. Run it again whenever you add or move a landmark.
-Zones without a border yet show a small circle instead.
+`fetch-osm` saves the maps to `server/data/osm-cache/` (not committed) and
+skips zones it already has, so after adding a landmark it only downloads
+the new one. `build-turf` writes `server/data/boundaries.json`, which is
+committed. Restart the server afterward to see the new borders.
 
 ## A note on coordinates
 

@@ -10,7 +10,8 @@
 //   npm run fetch-osm -- --all        # re-download everything
 //
 // What it downloads, within about 0.9 miles of each landmark:
-//   - every drivable street (highways down to neighborhood streets)
+//   - every drivable street (highways down to neighborhood streets),
+//     plus service roads and tracks (bases, campuses, plantations)
 //   - railroad tracks
 //   - water: lakes, rivers, the harbor, shorelines
 
@@ -43,6 +44,10 @@ function query([lat, lng]) {
     [out:json][timeout:90];
     (
       way(${around})["highway"~"${STREETS}"];
+      // Service roads (base streets, campus and golf course drives) and
+      // farm/plantation tracks — but not parking lot aisles or driveways.
+      way(${around})["highway"="service"]["service"!~"^(parking_aisle|driveway|drive-through)$"];
+      way(${around})["highway"="track"];
       way(${around})["railway"="rail"];
       way(${around})["natural"~"^(water|coastline)$"];
       way(${around})["waterway"="riverbank"];
