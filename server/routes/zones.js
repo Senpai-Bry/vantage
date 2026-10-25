@@ -11,8 +11,23 @@ const { rotateDueChallenges, currentChallengePrompt } = require("../lib/challeng
 // Each zone's street-bounded turf border (made by scripts/build-turf.js).
 // Zones without one yet show as a small circle on the map.
 const { boundaryFor } = require("../lib/geofence");
+// Each landmark's Wikimedia photo, for cards nobody has shot yet.
+const { landmarkPhotoFor } = require("../lib/photos");
 
 const router = express.Router();
+
+// "Hot right now" in the explore feed = most votes in this many days.
+const HOT_WINDOW_DAYS = 7;
+
+// How busy a zone is: how many photos it has, and how many votes its photos
+// got recently.
+const ZONE_ACTIVITY = `
+  SELECT
+    (SELECT COUNT(*) FROM submissions WHERE zone_id = @zoneId) AS submission_count,
+    (SELECT COUNT(*) FROM votes
+       JOIN submissions ON submissions.id = votes.submission_id
+       WHERE submissions.zone_id = @zoneId AND votes.created_at > @since) AS recent_votes
+`;
 
 // Whoever's photo has the most votes for a zone IS that zone's owner now —
 // there's no separate "claim" step anymore. Ties go to whoever submitted
@@ -41,10 +56,13 @@ function leadingSubmissionFor(zoneId) {
 // instead of a separate claims table).
 function toZoneJSON(row) {
   const leader = leadingSubmissionFor(row.id);
+  const since = Date.now() - HOT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const activity = db.prepare(ZONE_ACTIVITY).get({ zoneId: row.id, since });
 
   return {
     id: row.id,
     name: row.name,
+    city: row.city,
     coords: [row.lat, row.lng],
     description: row.description,
     boundary: boundaryFor(row.id),
@@ -54,6 +72,9 @@ function toZoneJSON(row) {
     leadingSubmission: leader
       ? { id: leader.id, photoUrl: leader.photo_path, voteCount: leader.vote_count }
       : null,
+    landmarkPhoto: landmarkPhotoFor(row.id),
+    submissionCount: activity.submission_count,
+    recentVotes: activity.recent_votes,
   };
 }
 

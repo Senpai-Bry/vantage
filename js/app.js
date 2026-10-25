@@ -1,6 +1,7 @@
 // js/app.js
 //
-// The map logic. Zone data (name/coords/description/current challenge) and
+// The map logic. (The card feed beside it lives in feed.js — the two talk
+// through a few small functions and "vantage:..." events.) Zone data (name/coords/description/current challenge) and
 // ownership both come from the backend — GET /api/zones returns everything
 // in one call, and ownership is derived from votes, not a manual claim.
 // Submitting a photo and voting also live here, talking to the endpoints
@@ -33,6 +34,9 @@ L.tileLayer(
   { maxZoom: 16 }
 ).addTo(map);
 
+// Tapping empty map closes the small preview card (phones/tablets).
+map.on("click", () => hideMapPreview());
+
 // ---------------------------------------------------------------------------
 // 2. Turf borders + markers
 // ---------------------------------------------------------------------------
@@ -55,18 +59,23 @@ function turfState(zone) {
 }
 
 // The selected zone's border gets drawn bolder so you can see its edges.
-function turfStyle(zone, selected) {
+// So does a highlighted one (its card is hovered in the feed, or it's
+// showing in the small preview card on a phone).
+function turfStyle(zone, selected, highlighted) {
   const style = TURF_STYLES[turfState(zone)];
-  return selected ? { ...style, weight: 3, opacity: 0.9 } : style;
+  if (selected) return { ...style, weight: 3, opacity: 0.9 };
+  if (highlighted) return { ...style, weight: 3, opacity: 0.9, fillOpacity: style.fillOpacity + 0.08 };
+  return style;
 }
 
-function makeIcon(zone, selected) {
+function makeIcon(zone, selected, highlighted) {
   const state = turfState(zone);
   const classes = ["turf-pin", `turf-pin--${state}`];
   if (selected) classes.push("turf-pin--selected", "vf");
+  if (highlighted && !selected) classes.push("turf-pin--highlighted");
 
-  // Only the selected zone shows its name above the dot.
-  const label = selected
+  // Only the selected or highlighted zone shows its name above the dot.
+  const label = selected || highlighted
     ? `<span class="turf-pin-label">${escapeHTML(zone.name)}</span>`
     : "";
 
@@ -85,30 +94,70 @@ function makeIcon(zone, selected) {
 const zones = {};
 
 function makeTurf(zone, selected) {
+  // bubblingMouseEvents: false — a click on a zone shouldn't also count as
+  // a click on the empty map (which closes the preview card on a phone).
+  const options = { ...turfStyle(zone, selected), bubblingMouseEvents: false };
   if (zone.boundary && zone.boundary.length >= 3) {
-    return L.polygon(zone.boundary, turfStyle(zone, selected));
+    return L.polygon(zone.boundary, options);
   }
   // No border built for this zone yet: fall back to a small circle.
-  return L.circleMarker(zone.coords, { radius: 34, ...turfStyle(zone, selected) });
+  return L.circleMarker(zone.coords, { radius: 34, ...options });
 }
 
 function renderZone(zone) {
   zones[zone.id] = { ...zones[zone.id], zone };
   const entry = zones[zone.id];
   const selected = zone.id === activeZoneId;
+  const highlighted = zone.id === highlightedZoneId;
 
   if (entry.marker) {
-    entry.marker.setIcon(makeIcon(zone, selected));
-    entry.marker.setZIndexOffset(selected ? 1000 : 0);
-    entry.turf.setStyle(turfStyle(zone, selected));
-    if (selected) entry.turf.bringToFront();
+    entry.marker.setIcon(makeIcon(zone, selected, highlighted));
+    entry.marker.setZIndexOffset(selected ? 1000 : highlighted ? 900 : 0);
+    entry.turf.setStyle(turfStyle(zone, selected, highlighted));
+    if (selected || highlighted) entry.turf.bringToFront();
   } else {
     entry.turf = makeTurf(zone, selected).addTo(map);
-    entry.turf.on("click", () => openPanel(zone.id));
+    entry.marker = L.marker(zone.coords, { icon: makeIcon(zone, selected, highlighted) }).addTo(map);
 
-    entry.marker = L.marker(zone.coords, { icon: makeIcon(zone, selected) }).addTo(map);
-    entry.marker.on("click", () => openPanel(zone.id));
+    for (const layer of [entry.turf, entry.marker]) {
+      layer.on("click", () => tapZone(zone.id));
+      // Pointing at a zone on the map lights up its card in the feed.
+      layer.on("mouseover", () => highlightCard(zone.id));
+      layer.on("mouseout", () => highlightCard(null));
+    }
   }
+}
+
+// On a computer, clicking a zone opens its panel. On a phone or tablet in
+// map view, it shows the small preview card first (feed.js).
+function tapZone(zoneId) {
+  if (isCompact.matches) {
+    showMapPreview(zoneId);
+  } else {
+    openPanel(zoneId);
+  }
+}
+
+// Lights up one zone on the map (or none, with null) without selecting it.
+// feed.js calls this when you hover a card.
+let highlightedZoneId = null;
+
+function highlightZone(zoneId) {
+  if (zoneId === highlightedZoneId) return;
+  const previousId = highlightedZoneId;
+  highlightedZoneId = zoneId;
+  redrawZone(previousId);
+  redrawZone(zoneId);
+}
+
+// Every zone we know about, as a plain list — what feed.js draws cards from.
+function allZones() {
+  return Object.values(zones).map((entry) => entry.zone);
+}
+
+// Tells feed.js the zone data changed, so it re-draws the cards.
+function announceZonesChanged() {
+  document.dispatchEvent(new CustomEvent("vantage:zones-changed"));
 }
 
 // Re-draws one zone's marker using the zone data we already have — used
@@ -120,6 +169,11 @@ function redrawZone(zoneId) {
 async function loadZones() {
   const zoneList = await api("/api/zones");
   zoneList.forEach(renderZone);
+  announceZonesChanged();
+  // Start zoomed out just enough to show every zone.
+  if (zoneList.length > 0) {
+    map.fitBounds(L.latLngBounds(zoneList.map((zone) => zone.coords)), { padding: [48, 48] });
+  }
 }
 
 loadZones().catch((err) => {
@@ -132,6 +186,7 @@ loadZones().catch((err) => {
 async function refreshZone(zoneId) {
   const zone = await api(`/api/zones/${zoneId}`);
   renderZone(zone);
+  announceZonesChanged();
   if (activeZoneId === zoneId) refreshPanel();
 }
 
@@ -160,6 +215,9 @@ const submissionsCount = document.getElementById("turf-submissions-count");
 
 // On a phone the panels are bottom sheets, so only one can be open at once.
 const isPhone = window.matchMedia("(max-width: 640px)");
+// Phones and tablets show the feed OR the map (feed.js flips between them);
+// bigger screens show both side by side. Matches the CSS breakpoint.
+const isCompact = window.matchMedia("(max-width: 900px)");
 
 let activeZoneId = null;
 
@@ -179,9 +237,17 @@ function openPanel(id) {
   loadSubmissions(id);
 
   if (isPhone.matches) closeLeaderboard();
+  hideMapPreview();
   panel.classList.remove("hidden");
   panel.scrollTop = 0;
   bringIntoView(zone.coords);
+  announceSelection();
+}
+
+// Tells feed.js which zone is open (or that none is), so its card can be
+// marked and scrolled into view.
+function announceSelection() {
+  document.dispatchEvent(new CustomEvent("vantage:zone-selected", { detail: { id: activeZoneId } }));
 }
 
 // Slides the map so the selected zone sits in the middle of the part of
@@ -191,6 +257,7 @@ function bringIntoView(coords) {
   const size = map.getSize();
   const leaderboardOpen = !document.getElementById("leaderboard-panel").classList.contains("hidden");
 
+  // (On a computer the panel floats over the map's left edge.)
   const left = isPhone.matches ? 0 : panel.offsetWidth + 48;
   const right = !isPhone.matches && leaderboardOpen ? 380 : 0;
   const bottom = isPhone.matches ? Math.min(window.innerHeight * 0.7, size.y - 60) : 0;
@@ -205,6 +272,7 @@ function closePanel() {
   const previousId = activeZoneId;
   activeZoneId = null;
   redrawZone(previousId);
+  announceSelection();
 }
 
 function refreshPanel() {
@@ -431,6 +499,7 @@ document.addEventListener("vantage:auth-changed", async () => {
   try {
     const zoneList = await api("/api/zones");
     zoneList.forEach(renderZone);
+    announceZonesChanged();
   } catch (err) {
     console.error("Couldn't refresh turf zones:", err);
   }

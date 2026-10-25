@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "fetch-osm": "node scripts/fetch-osm.js",
-    "build-turf": "node scripts/build-turf.js"
+    "build-turf": "node scripts/build-turf.js",
+    "fetch-photos": "node scripts/fetch-photos.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

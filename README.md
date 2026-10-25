@@ -54,7 +54,8 @@ vantage/
 ├── js/
 │   ├── api.js              tiny fetch() wrapper + localStorage token helpers
 │   ├── auth.js              wires up the sign up / log in / log out panel
-│   └── app.js               creates the map, loads zones from the API, handles claim/release
+│   ├── app.js               creates the map, loads zones from the API, the zone panel
+│   └── feed.js              the explore feed: zone cards, filter chips, List/Map button
 ├── assets/                 (empty for now — icons/images go here later)
 └── server/
     ├── index.js             starts the server — API routes + serves the frontend
@@ -125,6 +126,38 @@ npm run build-turf     # draw the borders from them (offline, a few seconds)
 skips zones it already has, so after adding a landmark it only downloads
 the new one. `build-turf` writes `server/data/boundaries.json`, which is
 committed. Restart the server afterward to see the new borders.
+
+## Explore feed and card photos
+
+Next to the map is a scrolling feed of zone cards, like the listings on
+Airbnb. Each card shows a photo, who holds the zone, its current challenge
+and, after you tap **Near me**, how far away it is. The chips across the top
+filter the feed: open turf, your turf, hot right now (most votes this week),
+and one chip per city (made from the `city` field in
+`server/data/landmarks.js`, so a new city gets a chip automatically).
+
+- **On a computer** the feed and map sit side by side. Hovering a card
+  lights its zone up on the map, and clicking a zone on the map highlights
+  and scrolls to its card.
+- **On a phone or tablet** you see one at a time. The **Map** button flips
+  to the map; tapping a dot there shows one small preview card, and tapping
+  that opens the zone.
+
+The photo on a card is the zone's top-voted player photo. Until somebody
+shoots a zone, it shows a free photo of the landmark from Wikimedia Commons,
+credited to its photographer (that's the deal for using them). To find
+those, from the `server/` folder:
+
+```
+npm run fetch-photos      # look up a photo for every zone that doesn't have one (needs internet)
+```
+
+It saves them to `server/data/landmark-photos.json` (committed). Restart the
+server afterward. If it picks a bad photo for a zone, find a better one on
+commons.wikimedia.org, put its file name in that landmark's `photo` field
+(e.g. `photo: "File:Some photo.jpg"`), and run
+`npm run fetch-photos -- zone-id` to swap it in. Zones with no photo at all
+get a "Be the first to shoot this" card.
 
 ## Geofence (you have to be there)
 

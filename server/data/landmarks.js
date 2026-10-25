@@ -10,11 +10,20 @@
 // Fields:
 //   id          unique slug — also used as the primary key in the database
 //   name        shown as the title in the info panel
+//   city        which town it's in — the explore feed's city filters are
+//               made from these, so a new city gets its own chip for free
 //   coords      [latitude, longitude]
 //   description shown under the title in the info panel
 //   challenges  the pool of photo prompts this zone rotates through — add
 //               as many as you want; a zone cycles to the next one on a
 //               timer (see CHALLENGE_ROTATION_HOURS in .env)
+//
+// Optional, for scripts/fetch-photos.js (the card photo before anyone has
+// shot a zone):
+//   wikipedia   the exact Wikipedia article title, if it isn't the same as
+//               `name`
+//   photo       a specific Wikimedia Commons file to use instead, e.g.
+//               "File:Some photo.jpg" — handy if the automatic pick is bad
 //
 // A note on accuracy: coordinates below come from a few different sources —
 // Wikipedia infobox coordinates and the National Register of Historic
@@ -29,6 +38,7 @@ const LANDMARKS = [
   {
     id: "goose-creek-high-school",
     name: "Goose Creek High School",
+    city: "Goose Creek",
     coords: [32.97412, -80.01635],
     description:
       "Home of the Gators, on Redbank Road. One of the two big public " +
@@ -42,6 +52,7 @@ const LANDMARKS = [
   {
     id: "stratford-high-school",
     name: "Stratford High School",
+    city: "Goose Creek",
     coords: [33.015392, -80.083189], // geocoded from 951 Crowfield Blvd
     description:
       "Home of the Knights, on Crowfield Boulevard — the other half of " +
@@ -55,6 +66,8 @@ const LANDMARKS = [
   {
     id: "st-james-church",
     name: "St. James Church",
+    city: "Goose Creek",
+    wikipedia: "St. James Church, Goose Creek",
     coords: [32.97549, -80.03267],
     description:
       "A colonial-era Anglican parish church, one of the oldest " +
@@ -68,6 +81,7 @@ const LANDMARKS = [
   {
     id: "goose-creek-city-hall",
     name: "The City of Goose Creek",
+    city: "Goose Creek",
     coords: [33.02826, -80.03587], // 519 N Goose Creek Blvd, verified on Google Maps
     description:
       "The Marguerite H. Brown Municipal Center on North Goose Creek " +
@@ -84,6 +98,7 @@ const LANDMARKS = [
   {
     id: "otranto-indigo-vats",
     name: "Otranto Plantation Indigo Vats",
+    city: "Goose Creek",
     coords: [32.983889, -79.9325], // NRHP-listed, coordinates from the National Register
     description:
       "The weathered brick remains of a colonial-era indigo processing " +
@@ -99,6 +114,7 @@ const LANDMARKS = [
   {
     id: "naval-weapons-station-charleston",
     name: "Naval Weapons Station Charleston",
+    city: "Goose Creek",
     coords: [32.9655, -79.971306],
     description:
       "The main gate of the Navy's weapons station, straddling the line " +
@@ -114,6 +130,7 @@ const LANDMARKS = [
   {
     id: "crowfield-golf-club",
     name: "Crowfield Golf & Country Club",
+    city: "Goose Creek",
     coords: [33.009107, -80.084814], // approximate — geocoded from a Hamlet Cir address; clubhouse is at 300 Hamlet Cir
     description:
       "A public golf course laid out across the old Crowfield " +
@@ -130,6 +147,7 @@ const LANDMARKS = [
   {
     id: "riverfront-park",
     name: "Riverfront Park",
+    city: "North Charleston",
     coords: [32.8697835, -79.9667466], // 1001 Everglades Dr, verified via mapping data
     description:
       "A waterfront park built on the site of the old Charleston Naval " +
@@ -144,6 +162,7 @@ const LANDMARKS = [
   {
     id: "north-charleston-coliseum-pac",
     name: "North Charleston Coliseum & Performing Arts Center",
+    city: "North Charleston",
     coords: [32.8655037, -80.022409], // 5001 Coliseum Dr, verified via mapping data
     description:
       "The city's biggest arena and theater complex, on Coliseum Drive " +
@@ -157,6 +176,7 @@ const LANDMARKS = [
   {
     id: "park-circle",
     name: "Park Circle",
+    city: "North Charleston",
     coords: [32.8812859, -79.9850877], // verified via topographic map data
     description:
       "The literal traffic circle at the heart of North Charleston's " +
@@ -171,6 +191,7 @@ const LANDMARKS = [
   {
     id: "chicora-graded-school",
     name: "Chicora Graded School",
+    city: "North Charleston",
     coords: [32.85583, -79.96889], // NRHP-listed, 1912 Success St
     description:
       "A historic schoolhouse on Success Street, listed on the " +
@@ -185,6 +206,7 @@ const LANDMARKS = [
   {
     id: "charleston-navy-yard-historic-district",
     name: "Charleston Navy Yard Historic District",
+    city: "North Charleston",
     coords: [32.86194, -79.96278], // NRHP-listed
     description:
       "The historic core of the old Charleston Naval Base — the same " +
@@ -201,6 +223,7 @@ const LANDMARKS = [
   {
     id: "colonial-dorchester-shs",
     name: "Colonial Dorchester State Historic Site",
+    city: "Summerville",
     coords: [32.95028, -80.17028], // NRHP-listed ("Old Dorchester"), 300 State Park Rd
     description:
       "The ruins of Fort Dorchester and a colonial bell tower mark the " +
@@ -215,6 +238,7 @@ const LANDMARKS = [
   {
     id: "old-white-meeting-house",
     name: "Old White Meeting House Ruins and Cemetery",
+    city: "Summerville",
     coords: [32.96556, -80.19472], // NRHP-listed
     description:
       "The brick ruins of a colonial-era church, destroyed in the 1886 " +
@@ -229,6 +253,8 @@ const LANDMARKS = [
   {
     id: "summerville-historic-district",
     name: "Downtown Summerville Historic District",
+    city: "Summerville",
+    wikipedia: "Summerville Historic District",
     coords: [33.01472, -80.18306], // NRHP-listed
     description:
       "The tree-lined heart of old Summerville, built around " +
@@ -243,6 +269,7 @@ const LANDMARKS = [
   {
     id: "middleton-place",
     name: "Middleton Place",
+    city: "Summerville",
     coords: [32.90528, -80.1375], // NRHP-listed
     description:
       "One of America's oldest landscaped gardens, laid out on a bend " +
@@ -257,6 +284,7 @@ const LANDMARKS = [
   {
     id: "azalea-park",
     name: "Azalea Park",
+    city: "Summerville",
     coords: [33.014508, -80.179958], // 105 W 5th South St, cross-checked against two sources
     description:
       "Home of the Flowertown Festival every spring, when the whole " +
@@ -270,6 +298,7 @@ const LANDMARKS = [
   {
     id: "ashley-river-road",
     name: "Ashley River Road",
+    city: "Summerville",
     coords: [32.88972, -80.12083], // NRHP-listed
     description:
       "A National Historic Landmark corridor lined with centuries-old " +
@@ -286,6 +315,7 @@ const LANDMARKS = [
   {
     id: "credit-one-stadium",
     name: "Credit One Stadium",
+    city: "Daniel Island",
     coords: [32.86254, -79.90392], // approximate — geocoded from a neighboring Seven Farms Dr address
     description:
       "The largest stadium built specifically for women's tennis in " +
@@ -299,6 +329,7 @@ const LANDMARKS = [
   {
     id: "musc-health-stadium",
     name: "MUSC Health Stadium",
+    city: "Daniel Island",
     coords: [32.8702487, -79.919538], // 1990 Daniel Island Dr, verified via Wikipedia
     description:
       "Home pitch of the Charleston Battery, one of the oldest " +
@@ -312,6 +343,7 @@ const LANDMARKS = [
   {
     id: "etiwan-park",
     name: "Etiwan Park",
+    city: "Daniel Island",
     coords: [32.856, -79.9253], // 453 Seven Farms Dr, verified via Wikipedia
     description:
       "A small waterfront park on Seven Farms Drive with sweeping " +
@@ -325,6 +357,7 @@ const LANDMARKS = [
   {
     id: "pierce-park",
     name: "Pierce Park",
+    city: "Daniel Island",
     coords: [32.8468855, -79.9048625], // approximate — geocoded from a nearby Pierce St address
     description:
       "A neighborhood park and pool overlooking the Wando River, " +

@@ -66,17 +66,54 @@
     </div>
   </header>
 
-  <main id="map-wrap">
-    <!-- Leaflet draws the map into this div -->
-    <div id="map"></div>
+  <!-- The explore screen: a scrolling feed of zone cards next to the map.
+       On a computer they sit side by side; on a phone or tablet you see
+       one at a time and flip between them with the List/Map button. -->
+  <main id="explore">
+    <section id="feed" aria-labelledby="feed-title">
+      <div class="feed-head">
+        <div class="feed-title-row">
+          <h2 id="feed-title" class="display-title">Explore turf</h2>
+          <span id="feed-count" class="mono-label mono-label--dim"></span>
+        </div>
+        <!-- Filter chips. feed.js fills these in, including one per city. -->
+        <div class="chips-scroller">
+          <button id="chips-prev" class="chips-arrow chips-arrow--prev" type="button" aria-label="Scroll filters left" tabindex="-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div id="feed-chips" class="chips" role="group" aria-label="Filter zones"></div>
+          <button id="chips-next" class="chips-arrow chips-arrow--next" type="button" aria-label="Scroll filters right" tabindex="-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
+      <p id="feed-status" class="feed-status" role="status"></p>
+      <ul id="feed-list" class="card-grid"></ul>
+    </section>
 
-    <!-- What the three kinds of turf look like on the map. -->
-    <div id="map-legend" aria-label="Map legend">
-      <span class="legend-item"><span class="legend-swatch legend-swatch--open"></span>Open turf</span>
-      <span class="legend-item"><span class="legend-swatch legend-swatch--held"></span>Held</span>
-      <span class="legend-item"><span class="legend-swatch legend-swatch--mine"></span>Your turf</span>
+    <div id="map-wrap">
+      <!-- Leaflet draws the map into this div -->
+      <div id="map"></div>
+
+      <!-- What the three kinds of turf look like on the map. -->
+      <div id="map-legend" aria-label="Map legend">
+        <span class="legend-item"><span class="legend-swatch legend-swatch--open"></span>Open turf</span>
+        <span class="legend-item"><span class="legend-swatch legend-swatch--held"></span>Held</span>
+        <span class="legend-item"><span class="legend-swatch legend-swatch--mine"></span>Your turf</span>
+      </div>
+
+      <!-- Phones/tablets, map view: tapping a dot shows one small card here
+           instead of opening the full zone panel right away. -->
+      <div id="map-preview" class="map-preview hidden"></div>
     </div>
   </main>
+
+  <!-- Phones/tablets only: flips between the card feed and the map. -->
+  <button id="view-toggle" class="view-toggle" type="button">
+    <span id="view-toggle-label">Map</span>
+    <svg id="view-toggle-map-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
+    <svg id="view-toggle-list-icon" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+  </button>
 
   <!-- Info panel for whichever turf zone is selected: its challenge, who
        holds it, a form to submit a photo, and the gallery of everyone's
@@ -184,6 +221,7 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/feed.js"></script>
   <script src="js/leaderboard.js"></script>
 </body>
 </html>

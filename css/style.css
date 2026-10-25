@@ -36,6 +36,8 @@
   --radius: 16px;
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
   --header-h: 72px;
+  /* How wide the card feed is beside the map on a computer. */
+  --feed-w: clamp(440px, 52vw, 860px);
 }
 
 * {
@@ -484,12 +486,620 @@ button {
 }
 
 /* ---------------------------------------------------------------------- */
+/* Explore screen: card feed + map                                         */
+/* ---------------------------------------------------------------------- */
+
+#explore {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  /* Keeps Leaflet's own z-indexes inside this box, so the panels and the
+     header always stay on top of the map. */
+  isolation: isolate;
+}
+
+#feed {
+  width: var(--feed-w);
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+/* Title + chips stay pinned at the top while the cards scroll. */
+.feed-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px 32px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.feed-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Filter chips: one row that scrolls sideways if it doesn't fit. The
+   scroller around it adds faded edges and arrow buttons on whichever side
+   has more chips hidden (feed.js toggles the --more-left/right classes). */
+.chips-scroller {
+  position: relative;
+  margin: 0 -32px;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  padding: 2px 32px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.chips-scroller::before,
+.chips-scroller::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: 72px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.chips-scroller::before {
+  left: 0;
+  background: linear-gradient(to right, var(--surface) 35%, rgba(255, 255, 255, 0));
+}
+
+.chips-scroller::after {
+  right: 0;
+  background: linear-gradient(to left, var(--surface) 35%, rgba(255, 255, 255, 0));
+}
+
+.chips-scroller--more-left::before,
+.chips-scroller--more-right::after {
+  opacity: 1;
+}
+
+.chips-arrow {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  margin-top: -16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.chips-arrow:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  transform: scale(1.05);
+}
+
+.chips-arrow--prev {
+  left: 24px;
+}
+
+.chips-arrow--next {
+  right: 24px;
+}
+
+/* Arrows only on devices with a mouse — on a phone you just swipe. */
+@media (hover: hover) and (pointer: fine) {
+  .chips-scroller--more-left .chips-arrow--prev,
+  .chips-scroller--more-right .chips-arrow--next {
+    display: flex;
+  }
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.chip:hover {
+  border-color: var(--text);
+}
+
+.chip svg {
+  color: var(--accent);
+}
+
+.chip--active {
+  border-color: var(--text);
+  background: var(--text);
+  color: #ffffff;
+}
+
+.chip--active svg {
+  color: var(--accent-bright);
+}
+
+.feed-status {
+  margin: 16px 32px 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.feed-status:empty {
+  display: none;
+}
+
+/* The cards: as many columns as fit, each at least 220px wide. */
+.card-grid {
+  list-style: none;
+  margin: 0;
+  padding: 24px 32px 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 36px 24px;
+}
+
+.feed-empty {
+  grid-column: 1 / -1;
+  padding: 40px 0;
+  font-size: 15px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* Each card fills its grid cell, so the footers in a row line up. */
+.card-grid > li {
+  display: flex;
+}
+
+.zone-card {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+/* The photo, with viewfinder corners that only show on hover/selection. */
+.zone-card-media {
+  position: relative;
+  margin-bottom: 6px;
+  aspect-ratio: 4 / 3;
+  /* Without this, a tall (portrait) photo stretches the box taller than
+     4:3, which made some cards bigger than their neighbors. */
+  min-height: 0;
+  border-radius: 12px;
+  background: var(--surface-2);
+  --vf-inset: -7px;
+  --vf-len: 16px;
+}
+
+.zone-card-media::after {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.zone-card:hover .zone-card-media::after,
+.zone-card--hover .zone-card-media::after,
+.zone-card--active .zone-card-media::after {
+  opacity: 1;
+}
+
+.zone-card--mine .zone-card-media {
+  --vf-color: var(--accent);
+}
+
+.zone-card-img {
+  /* Pinned to the box's edges, so the photo can never change the card's
+     size — it just gets cropped to fit. */
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  transition: filter 0.2s ease;
+}
+
+.zone-card:hover .zone-card-img,
+.zone-card--hover .zone-card-img {
+  filter: brightness(1.05) saturate(1.08);
+}
+
+/* No photo yet: a sunset-orange "no shots yet" placeholder. */
+.zone-card-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 30% 20%, #ffe2cc 0, transparent 55%),
+    linear-gradient(135deg, #fff4ec 0%, #ffd9bd 100%);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.zone-card-empty svg path {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+  stroke-linecap: square;
+}
+
+.zone-card-empty svg circle {
+  fill: var(--accent-bright);
+}
+
+.zone-card-badge,
+.zone-card-hot {
+  position: absolute;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.zone-card-badge {
+  left: 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.zone-card-badge--held {
+  background: var(--held);
+  color: #ffffff;
+}
+
+.zone-card-badge--mine {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.zone-card-hot {
+  right: 10px;
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.zone-card-caption {
+  margin: -2px 0 0;
+}
+
+/* The Wikimedia credit: a small tag in the photo's corner (hover it to see
+   the photographer; click it for the photo's page). It sits above the
+   card's big click area so it can be clicked on its own. */
+.zone-card-credit {
+  position: absolute;
+  z-index: 1;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  white-space: nowrap;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zone-card-credit:hover {
+  background: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+}
+
+.zone-card-title {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* The zone name is the card's real button (for keyboards and screen
+   readers); its invisible ::after stretches over the whole card so a
+   click anywhere on it counts. */
+.zone-card-open {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.zone-card-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.zone-card-open:focus-visible {
+  outline: none;
+}
+
+.zone-card:has(.zone-card-open:focus-visible) .zone-card-media {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.zone-card-meta {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+/* The challenge is the reason to go, so it reads as a quote: a short
+   orange rule beside it, the same orange as the challenge box in the
+   zone panel. Two lines max. */
+.zone-card-challenge {
+  margin: 6px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent-bright);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Bottom line: who holds it + votes (or "Unclaimed" + photo count).
+   margin-top: auto keeps it lined up across a row of cards. */
+.zone-card-footer {
+  margin: auto 0 0;
+  padding-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.zone-card-holder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zone-card--open .zone-card-holder {
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.zone-card-dot {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px dashed var(--open-ring);
+}
+
+.avatar--sm {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  background: var(--held);
+  color: #ffffff;
+}
+
+.avatar--sm.avatar--me {
+  background: var(--accent-bright);
+}
+
+.zone-card-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.zone-card--mine .zone-card-stat {
+  color: var(--accent);
+}
+
+/* List/Map button: phones and tablets only (see the media query below). */
+.view-toggle {
+  display: none;
+  position: fixed;
+  z-index: 1050;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--text);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: bottom 0.2s ease;
+}
+
+/* The small card that pops up when you tap a dot in map view. */
+.map-preview {
+  position: absolute;
+  z-index: 1001; /* above Leaflet's zoom buttons and credits */
+  left: 12px;
+  right: 12px;
+  bottom: 16px;
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.map-preview-open {
+  width: 100%;
+  display: flex;
+  gap: 14px;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-preview-media {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.map-preview-media .zone-card-img,
+.map-preview-media .zone-card-empty {
+  border-radius: 0;
+}
+
+.map-preview-media .zone-card-empty {
+  font-size: 12px;
+  gap: 6px;
+  padding: 6px;
+}
+
+.map-preview-media .zone-card-empty svg {
+  width: 24px;
+  height: 24px;
+}
+
+.map-preview-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding-right: 28px; /* room for the close button */
+}
+
+.map-preview-title {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.map-preview-challenge {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.map-preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------- */
 /* Map                                                                     */
 /* ---------------------------------------------------------------------- */
 
 #map-wrap {
   position: relative;
+  z-index: 0; /* Leaflet's layers stack inside this box, under the feed */
   flex: 1;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -595,8 +1205,9 @@ button {
   transition: transform 0.15s ease;
 }
 
-.turf-pin:hover .turf-pin-dot {
-  transform: scale(1.15);
+.turf-pin:hover .turf-pin-dot,
+.turf-pin--highlighted .turf-pin-dot {
+  transform: scale(1.3);
 }
 
 .turf-pin--held .turf-pin-dot {
@@ -679,8 +1290,10 @@ button {
   color: var(--text-dim);
 }
 
+/* On a computer the zone panel floats over the map, just right of the
+   card feed. */
 #turf-panel {
-  left: 24px;
+  left: calc(var(--feed-w) + 24px);
   width: min(380px, calc(100vw - 48px));
 }
 
@@ -1088,6 +1701,61 @@ button {
   .brand-tagline {
     display: none;
   }
+
+  /* Phones and tablets: the feed and the map stack on top of each other,
+     and the List/Map button decides which one you see. The map is always
+     drawn underneath, so Leaflet never loses track of its size. */
+  #feed {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: auto;
+    border-right: none;
+  }
+
+  #map-wrap {
+    position: absolute;
+    inset: 0;
+  }
+
+  .view-map #feed {
+    display: none;
+  }
+
+  .view-toggle {
+    display: flex;
+  }
+
+  /* Lift the button above the preview card when that's showing, and hide
+     it while a panel (zone or leaderboard) is open. */
+  body:has(.map-preview:not(.hidden)) .view-toggle {
+    bottom: 160px;
+  }
+
+  body:has(.panel:not(.hidden)) .view-toggle,
+  body:has(.modal-backdrop:not(.hidden)) .view-toggle {
+    display: none;
+  }
+
+  /* Leave room at the bottom of the feed for the button. */
+  .card-grid {
+    padding-bottom: 104px;
+  }
+
+  #turf-panel {
+    left: 24px;
+  }
+
+  /* The legend moves to the top so the List button has the bottom. */
+  #map-legend {
+    top: 12px;
+    bottom: auto;
+  }
+
+  /* Pinch to zoom instead — the +/- buttons would sit under the cards. */
+  .leaflet-control-zoom {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1136,10 +1804,36 @@ button {
   }
 
   #map-legend {
-    bottom: 16px;
     gap: 14px;
     padding: 8px 14px;
     font-size: 10px;
+  }
+
+  .feed-head {
+    padding: 18px 16px 12px;
+  }
+
+  .chips-scroller {
+    margin: 0 -16px;
+  }
+
+  .chips {
+    padding: 2px 16px;
+  }
+
+  .feed-status {
+    margin: 14px 16px 0;
+  }
+
+  /* One big card per row, like a delivery app. */
+  .card-grid {
+    grid-template-columns: 1fr;
+    padding: 20px 16px 104px;
+    gap: 32px;
+  }
+
+  .zone-card-media {
+    --vf-inset: -6px;
   }
 
   .display-title {
