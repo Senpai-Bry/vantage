@@ -1291,10 +1291,58 @@ button {
 }
 
 /* On a computer the zone panel floats over the map, just right of the
-   card feed. */
+   card feed. A bit wider than the leaderboard and roomier inside: it's
+   where the actual playing happens. */
 #turf-panel {
   left: calc(var(--feed-w) + 24px);
-  width: min(380px, calc(100vw - 48px));
+  width: min(420px, calc(100vw - 48px));
+  gap: 20px;
+  padding: 0 28px 28px;
+}
+
+/* The photo across the top runs edge to edge (cancelling the panel's side
+   padding), like the cover photo on a listing. */
+.panel-hero {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 -28px;
+  aspect-ratio: 16 / 10;
+  min-height: 0;
+  background: var(--surface-2);
+  overflow: hidden;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.panel-hero .zone-card-img,
+.panel-hero .zone-card-empty {
+  border-radius: 0;
+}
+
+/* Viewfinder corners sit inside the photo here (there's no room outside). */
+.panel-hero.vf {
+  --vf-inset: 14px;
+  --vf-len: 22px;
+  --vf-color: #ffffff;
+}
+
+.panel-hero.vf::after {
+  z-index: 1;
+}
+
+/* The close button floats over the photo, so it gets a white backing. */
+#turf-panel .close-btn {
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+#turf-panel .panel-head {
+  gap: 8px;
+  padding-right: 0;
+}
+
+#turf-panel .panel-desc {
+  margin-top: 4px;
 }
 
 #leaderboard-panel {
@@ -1323,16 +1371,23 @@ button {
 #turf-submit-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* The photo picker: a big, tall drop area with the camera icon on top,
+   so it reads as "this is where your shot goes". */
 .upload-drop {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  padding: 12px 14px;
+  min-height: 150px;
+  padding: 24px 20px;
   border: 1.5px dashed var(--border-strong);
-  border-radius: 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  text-align: center;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -1353,11 +1408,13 @@ button {
 }
 
 .upload-icon {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
-  border-radius: 10px;
-  background: var(--surface-2);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1366,21 +1423,44 @@ button {
 .upload-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .upload-title {
-  font-size: 14px;
-  font-weight: 600;
+  max-width: 100%;
+  font-size: 15px;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .upload-hint {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.upload-drop--chosen .upload-icon {
+  background: var(--accent-bright);
+  color: #ffffff;
+}
+
+.geofence-note {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--text-dim);
+}
+
+.geofence-note svg {
+  flex-shrink: 0;
+  color: var(--accent);
 }
 
 .login-prompt {
@@ -1411,6 +1491,8 @@ button {
   align-items: baseline;
   justify-content: space-between;
   margin-top: 4px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }
 
 /* Submissions gallery: a two-column photo grid. */
@@ -1426,7 +1508,9 @@ button {
 
 .turf-submissions-empty {
   grid-column: 1 / -1;
-  padding: 12px 0;
+  padding: 28px 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
   font-size: 14px;
   color: var(--text-dim);
   text-align: center;
@@ -1838,5 +1922,17 @@ button {
 
   .display-title {
     font-size: 30px;
+  }
+
+  /* Zone panel as a bottom sheet: slimmer sides and a shorter photo, so
+     the challenge and the upload area still show without scrolling. */
+  #turf-panel {
+    padding: 0 20px 28px;
+  }
+
+  .panel-hero {
+    margin: 0 -20px;
+    aspect-ratio: 16 / 8;
+    border-radius: 20px 20px 0 0;
   }
 }

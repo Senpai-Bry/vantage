@@ -200,6 +200,8 @@ const panelDesc = document.getElementById("turf-panel-desc");
 const panelChallengeBox = document.getElementById("turf-panel-challenge-box");
 const panelChallenge = document.getElementById("turf-panel-challenge");
 const panelStatus = document.getElementById("turf-panel-status");
+const panelHero = document.getElementById("turf-panel-hero");
+const panelMeta = document.getElementById("turf-panel-meta");
 const panelCloseBtn = document.getElementById("turf-panel-close");
 
 const submitForm = document.getElementById("turf-submit-form");
@@ -279,6 +281,13 @@ function refreshPanel() {
   if (!activeZoneId) return;
   const { zone } = zones[activeZoneId];
   const state = turfState(zone);
+
+  // The photo across the top can change when the leading photo changes,
+  // so it's re-drawn here. cardPhoto() and distanceText() live in feed.js.
+  panelHero.innerHTML = cardPhoto(zone).html;
+  panelHero.classList.toggle("vf", Boolean(zone.leadingSubmission));
+  panelHero.classList.toggle("vf--held", state === "held");
+  panelMeta.textContent = [zone.city, distanceText(zone)].filter(Boolean).join(" · ");
 
   panelChallenge.textContent = zone.currentChallenge || "";
   panelChallengeBox.classList.toggle("hidden", !zone.currentChallenge);
@@ -388,7 +397,7 @@ async function loadSubmissions(zoneId) {
     submissionsCount.textContent = `${subs.length} ${subs.length === 1 ? "frame" : "frames"}`;
     if (subs.length === 0) {
       submissionsList.innerHTML =
-        '<li class="turf-submissions-empty">No photos yet — be the first!</li>';
+        '<li class="turf-submissions-empty">No frames yet. The first good shot takes this turf.</li>';
       return;
     }
     // The backend already sorts by vote count, so index 0 is the leader.

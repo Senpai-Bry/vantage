@@ -123,9 +123,15 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
 
+    <!-- The zone's photo across the top: the photo holding the zone, or
+         the landmark's Wikimedia photo, or a "no shots yet" placeholder.
+         Filled in by app.js using the same cardPhoto() as the feed. -->
+    <div id="turf-panel-hero" class="panel-hero"></div>
+
     <div class="panel-head">
       <p id="turf-panel-status" class="eyebrow"></p>
       <h2 id="turf-panel-title" class="display-title">Zone name</h2>
+      <p id="turf-panel-meta" class="zone-card-meta"></p>
       <p id="turf-panel-desc" class="panel-desc">Zone description</p>
     </div>
 
@@ -141,7 +147,7 @@
         </span>
         <span class="upload-text">
           <span id="turf-submit-filename" class="upload-title">Choose a photo</span>
-          <span class="upload-hint">You'll need to be standing inside this zone to submit</span>
+          <span class="upload-hint">Tap to take one or pick from your camera roll</span>
         </span>
         <input
           type="file"
@@ -152,6 +158,10 @@
         />
       </label>
       <button type="submit" id="turf-submit-btn" class="primary-btn">Submit photo</button>
+      <p class="geofence-note">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        You'll need to be inside this zone's turf to submit.
+      </p>
     </form>
 
     <!-- Shown instead of the form when nobody is logged in. -->
