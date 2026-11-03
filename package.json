@@ -1,0 +1,12 @@
+{
+  "name": "vantage",
+  "private": true,
+  "description": "Root package so hosts like Railway can build and start the server in server/.",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "npm ci --prefix server --omit=dev",
+    "start": "npm start --prefix server"
+  }
+}

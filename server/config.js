@@ -11,9 +11,13 @@ const config = {
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5000",
   jwtSecret: process.env.JWT_SECRET,
   dbPath: process.env.DB_PATH || require("path").join(__dirname, "db", "vantage.db"),
+  // Where uploaded player photos are saved. Locally that's server/uploads;
+  // on Railway it points at the persistent volume (e.g. /data/uploads) so
+  // photos survive restarts and redeploys.
+  uploadDir: process.env.UPLOAD_DIR || require("path").join(__dirname, "uploads"),
 
   // How often each zone's photo challenge rotates to the next prompt in its
-  // list. 24 (hours) is the real setting; while testing locally, set this
+  // list. 72 (hours, i.e. every 3 days) is the real setting; while testing locally, set this
   // to something tiny in your .env (e.g. 0.02, about a minute) so you don't
   // have to wait a full day to see a rotation happen.
   // Geofence: when on, a photo is only accepted if the player's phone says
@@ -22,7 +26,7 @@ const config = {
   geofenceEnabled: (process.env.GEOFENCE || "on").toLowerCase() !== "off",
 
   challengeRotationMs:
-    Number(process.env.CHALLENGE_ROTATION_HOURS || 24) * 60 * 60 * 1000,
+    Number(process.env.CHALLENGE_ROTATION_HOURS || 72) * 60 * 60 * 1000,
 };
 
 // Fail loudly at startup rather than silently signing tokens with

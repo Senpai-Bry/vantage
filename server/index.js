@@ -24,7 +24,7 @@ app.use("/api/zones", zonesRouter);
 app.use("/api", submissionsRouter);
 app.use("/api/leaderboard", leaderboardRouter);
 // Uploaded photos, served as plain static files at /uploads/<filename>.
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(config.uploadDir));
 
 // Everything that isn't an /api/* or /uploads/* route is the frontend —
 // index.html, css/style.css, js/app.js, etc, all live one level up from
@@ -32,5 +32,5 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static(path.join(__dirname, "..")));
 
 app.listen(config.port, () => {
-  console.log(`Vantage server running at http://localhost:${config.port}`);
+  console.log(`Vantage server running on port ${config.port}`);
 });

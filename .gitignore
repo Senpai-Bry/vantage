@@ -11,3 +11,7 @@ server/uploads/*
 
 # Raw OpenStreetMap downloads used to build turf borders (re-download with npm run fetch-osm)
 server/data/osm-cache/
+
+node_modules/
+.env
+server/db/vantage.db
