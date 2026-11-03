@@ -15,3 +15,5 @@ server/data/osm-cache/
 node_modules/
 .env
 server/db/vantage.db
+# Auto-generated login-token secret (see server/config.js)
+.jwt-secret

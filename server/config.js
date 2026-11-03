@@ -29,13 +29,22 @@ const config = {
     Number(process.env.CHALLENGE_ROTATION_HOURS || 72) * 60 * 60 * 1000,
 };
 
-// Fail loudly at startup rather than silently signing tokens with
-// "undefined" — a missing secret is a config mistake you want to know
-// about immediately, not discover later as a security hole.
+// No JWT_SECRET set (e.g. on Railway)? Make one automatically and save it
+// in a file next to the database, so it stays the same across restarts and
+// redeploys (on Railway that file lives on the persistent /data volume).
+// The secret never appears in code, git, or the Railway dashboard.
 if (!config.jwtSecret) {
-  throw new Error(
-    "Missing JWT_SECRET. Copy server/.env.example to server/.env and set a value."
-  );
+  const fs = require("fs");
+  const path = require("path");
+  const secretFile = path.join(path.dirname(config.dbPath), ".jwt-secret");
+  if (fs.existsSync(secretFile)) {
+    config.jwtSecret = fs.readFileSync(secretFile, "utf8").trim();
+  } else {
+    config.jwtSecret = require("crypto").randomBytes(32).toString("hex");
+    fs.mkdirSync(path.dirname(secretFile), { recursive: true });
+    fs.writeFileSync(secretFile, config.jwtSecret, { mode: 0o600 });
+    console.log("No JWT_SECRET set, so generated one and saved it next to the database.");
+  }
 }
 
 module.exports = config;
