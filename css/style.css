@@ -1936,3 +1936,710 @@ button {
     border-radius: 20px 20px 0 0;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Player profiles                                                         */
+/* ---------------------------------------------------------------------- */
+
+/* Avatars with a real profile picture (any size). */
+.avatar--img {
+  overflow: hidden;
+  background: var(--surface-2);
+  padding: 0;
+}
+
+.avatar--img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar--xl {
+  width: 112px;
+  height: 112px;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-size: 48px;
+  font-weight: 800;
+  background: var(--held);
+  color: #ffffff;
+}
+
+.avatar--xl.avatar--me:not(.avatar--img) {
+  background: var(--accent-bright);
+}
+
+/* A username that links to its profile. Looks like the text around it
+   until you point at it. */
+.user-link {
+  min-width: 0;
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.user-link:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.turf-submission-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Leaderboard rows are links now. */
+#leaderboard-list > li {
+  display: block;
+}
+
+a.leaderboard-row {
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+a.leaderboard-row:hover {
+  background: var(--surface-2);
+}
+
+a.leaderboard-row--me:hover {
+  background: #fff1e6;
+}
+
+.account-menu-item {
+  text-decoration: none;
+}
+
+.account-menu-item--divided {
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  padding-top: 14px;
+}
+
+/* While a profile is open it takes the explore screen's place. */
+.view-profile #explore,
+.view-profile .view-toggle {
+  display: none !important;
+}
+
+.profile-view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.profile-wrap {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 28px 40px 80px;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  margin-left: -10px;
+  padding: 0 14px 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background: var(--surface-2);
+}
+
+.profile-status {
+  margin: 40px 0;
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.profile-status:empty {
+  display: none;
+}
+
+.profile-missing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 64px 0;
+}
+
+/* Two columns on a computer: the identity card (sticky) on the left, the
+   about / turf / photos on the right. */
+.profile-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 72px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+.profile-side {
+  position: sticky;
+  top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* The identity card: who they are on the left, their numbers on the right. */
+.profile-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 104px;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 24px 28px 28px;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.profile-card-id {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  text-align: center;
+}
+
+.profile-avatar {
+  margin-bottom: 10px;
+  border-radius: 50%;
+  --vf-inset: -9px;
+  --vf-len: 16px;
+}
+
+.profile-name {
+  margin: 0;
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.profile-card-stats {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-stat {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-stat:first-child {
+  padding-top: 0;
+}
+
+.profile-stat:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.profile-stat dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.profile-stat dt {
+  order: 2;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.profile-stat-of {
+  margin-left: 3px;
+  font-family: var(--font-body);
+  font-stretch: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.profile-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.profile-facts li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  line-height: 1.4;
+}
+
+.profile-facts svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.profile-facts strong {
+  font-weight: 700;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.profile-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+}
+
+.profile-action.outline-btn {
+  padding: 0 18px;
+  border-radius: 999px;
+}
+
+.profile-action.text-btn span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Right column */
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  min-width: 0;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* The first section on the right lines up with the top of the card. */
+.profile-main > .profile-section:first-child .section-head {
+  padding-top: 0;
+  border-top: none;
+}
+
+.profile-about {
+  gap: 14px;
+}
+
+.profile-about .display-subtitle {
+  font-size: 26px;
+}
+
+.profile-bio {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.profile-empty {
+  margin: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.profile-empty p {
+  margin: 0;
+  max-width: 52ch;
+}
+
+.profile-empty--wide {
+  grid-column: 1 / -1;
+}
+
+/* Their turf reuses the explore feed's cards, minus the feed's padding. */
+.profile-turf-grid {
+  padding: 0;
+  gap: 32px 24px;
+}
+
+/* Their photos: a tidy grid of portrait frames. */
+.profile-frames {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 28px 20px;
+}
+
+.profile-frame {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.profile-frame-media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  border-radius: 12px;
+  background: var(--surface-2);
+  --vf-inset: -6px;
+  --vf-len: 14px;
+}
+
+.profile-frame-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.profile-frame:hover .profile-frame-media img {
+  filter: brightness(1.05) saturate(1.08);
+}
+
+.profile-frame:focus-visible .profile-frame-media {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.turf-submission-badge--mine {
+  background: var(--accent);
+}
+
+.profile-frame-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.profile-frame-votes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.profile-frame-votes svg {
+  color: var(--accent-bright);
+}
+
+/* Edit profile window */
+
+.modal--form {
+  width: min(480px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+#profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.avatar-edit {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.avatar-edit .avatar--xl {
+  width: 88px;
+  height: 88px;
+  font-size: 38px;
+}
+
+.avatar-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.avatar-edit-actions .outline-btn {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+}
+
+.avatar-edit-actions:focus-within .outline-btn {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.link-btn--quiet {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.field-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.field-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.field-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.field textarea {
+  min-height: 96px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.field textarea:focus {
+  outline: 2px solid var(--text);
+  outline-offset: -1px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-actions .text-btn {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Profiles on tablets and phones: one column, card on top. */
+@media (max-width: 900px) {
+  .profile-wrap {
+    padding: 16px 24px 64px;
+  }
+
+  .profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    margin-top: 12px;
+  }
+
+  .profile-side {
+    position: static;
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-wrap {
+    padding: 12px 16px 56px;
+  }
+
+  .profile-card {
+    grid-template-columns: minmax(0, 1fr) 92px;
+    padding: 24px 18px 24px 20px;
+    gap: 14px;
+  }
+
+  .profile-avatar .avatar--xl {
+    width: 96px;
+    height: 96px;
+    font-size: 40px;
+  }
+
+  .profile-name {
+    font-size: 26px;
+  }
+
+  .profile-stat dd {
+    font-size: 22px;
+  }
+
+  .profile-main {
+    gap: 40px;
+  }
+
+  .profile-about .display-subtitle {
+    font-size: 22px;
+  }
+
+  .profile-bio {
+    font-size: 16px;
+  }
+
+  .profile-frames {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 14px;
+  }
+
+  .modal-actions .primary-btn {
+    flex: 1;
+  }
+}
+
+/* The holder's name on a card sits above the card's stretched click area,
+   so it opens their profile instead of the zone. */
+.zone-card-holder .user-link {
+  position: relative;
+  z-index: 1;
+}
+
+/* Long names step down a size (profile.js adds these). */
+.profile-name--long {
+  font-size: 24px;
+}
+
+.profile-name--xlong {
+  font-size: 20px;
+}
+
+/* A small orange pill under the name for whoever's #1. */
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  margin-top: 4px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Three turf cards across on a computer. */
+.profile-turf-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+/* Phones: turf cards become a sideways-swiping row, like listing rows on
+   Airbnb, instead of a long column of full-width cards. */
+@media (max-width: 640px) {
+  .profile-turf-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 78%;
+    gap: 16px;
+    margin: 0 -16px;
+    padding: 4px 16px 8px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 16px;
+    scrollbar-width: none;
+  }
+
+  .profile-turf-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .profile-turf-grid > li {
+    scroll-snap-align: start;
+  }
+
+  /* Nothing to swipe through: just the message. */
+  .profile-turf-grid:has(.profile-empty) {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Profile turf cards are narrower than the feed's: skip the "this week"
+   badge so it doesn't crowd the turf badge. */
+.profile-turf-grid .zone-card-hot {
+  display: none;
+}
+
+.eyebrow .user-link {
+  margin-left: -3px; /* tighten the gap after "Held by" */
+}

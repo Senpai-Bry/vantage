@@ -55,7 +55,9 @@ vantage/
 │   ├── api.js              tiny fetch() wrapper + localStorage token helpers
 │   ├── auth.js              wires up the sign up / log in / log out panel
 │   ├── app.js               creates the map, loads zones from the API, the zone panel
-│   └── feed.js              the explore feed: zone cards, filter chips, List/Map button
+│   ├── feed.js              the explore feed: zone cards, filter chips, List/Map button
+│   ├── leaderboard.js        the leaderboard panel
+│   └── profile.js            player profiles (/u/<username>) and the Edit profile window
 ├── assets/                 (empty for now — icons/images go here later)
 └── server/
     ├── index.js             starts the server — API routes + serves the frontend
@@ -67,7 +69,10 @@ vantage/
     │   └── auth.js            checks the login token on protected routes
     ├── routes/
     │   ├── auth.js             POST /api/auth/signup, POST /api/auth/login
-    │   └── zones.js             GET /api/zones, POST/DELETE /api/zones/:id/claim
+    │   ├── zones.js             GET /api/zones
+    │   ├── submissions.js        photo submissions and votes
+    │   ├── leaderboard.js        GET /api/leaderboard
+    │   └── users.js              GET /api/users/:username, PUT /api/users/me (profiles)
     ├── .env.example           template for your local server/.env
     └── db/                    the SQLite database file lives here (gitignored)
 ```
@@ -158,6 +163,29 @@ commons.wikimedia.org, put its file name in that landmark's `photo` field
 (e.g. `photo: "File:Some photo.jpg"`), and run
 `npm run fetch-photos -- zone-id` to swap it in. Zones with no photo at all
 get a "Be the first to shoot this" card.
+
+## Player profiles
+
+Every player has a profile page at `/u/<username>` (for example
+`vantageturf.com/u/senpaibry`), so a profile link can be shared.
+
+- **What's on it:** profile picture, home city, what they shoot on, a short
+  bio, their stats (zones held, votes, leaderboard rank), the turf they
+  hold (the same cards as the explore feed), and every photo they've
+  submitted. Photos still holding their zone get a HOLDING badge.
+- **Getting there:** every username in the app links to that player's
+  profile: on zone cards, in the zone panel, on photos, and on the
+  leaderboard. Your own is under **My profile** in the account menu.
+- **Editing:** on your own profile (or **Edit profile** in the account
+  menu). The profile picture reuses the same upload code as zone photos
+  (`server/lib/uploads.js`), and the old picture is deleted when you
+  replace it.
+- **Scores** (rank, zones held, votes) come from `server/lib/scores.js`,
+  the same code the leaderboard uses, so the two always agree.
+
+There's no separate page file for profiles: the server sends `index.html`
+for any `/u/...` address and `js/profile.js` reads the address to decide
+which profile to show.
 
 ## Geofence (you have to be there)
 

@@ -251,8 +251,8 @@ function cardFooterHTML(zone) {
   return `
     <p class="zone-card-footer">
       <span class="zone-card-holder">
-        <span class="avatar avatar--sm${state === "mine" ? " avatar--me" : ""}">${escapeHTML(zone.owner.charAt(0))}</span>
-        ${escapeHTML(holder)}
+        ${avatarHTML(zone.owner, zone.ownerAvatar, { size: "sm", me: state === "mine" })}
+        ${profileLinkHTML(zone.owner, holder)}
       </span>
       <span class="zone-card-stat">${HEART_ICON} ${votes}</span>
     </p>`;

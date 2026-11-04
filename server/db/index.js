@@ -83,6 +83,15 @@ if (!zoneColumns.includes("city")) {
   db.exec("ALTER TABLE zones ADD COLUMN city TEXT");
 }
 
+// Profile fields on `users` (added for player profiles): a profile
+// picture, a short bio, a home city, and what they shoot on. All optional.
+const userColumns = db.prepare("PRAGMA table_info(users)").all().map((c) => c.name);
+for (const column of ["avatar_path", "bio", "home_city", "gear"]) {
+  if (!userColumns.includes(column)) {
+    db.exec(`ALTER TABLE users ADD COLUMN ${column} TEXT`);
+  }
+}
+
 // Seed zones from the landmarks list. INSERT OR IGNORE means this is safe
 // to run on every startup — a zone that's already there (matched by its
 // slug id) is left alone, so existing claims/submissions never get wiped

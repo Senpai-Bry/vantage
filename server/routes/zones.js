@@ -36,7 +36,7 @@ const ZONE_ACTIVITY = `
 const LEADING_SUBMISSION = `
   SELECT
     submissions.id, submissions.photo_path, submissions.created_at,
-    users.username,
+    users.username, users.avatar_path,
     COUNT(votes.user_id) AS vote_count
   FROM submissions
   LEFT JOIN votes ON votes.submission_id = submissions.id
@@ -68,6 +68,7 @@ function toZoneJSON(row) {
     boundary: boundaryFor(row.id),
     currentChallenge: currentChallengePrompt(row.id, row.current_challenge_index),
     owner: leader ? leader.username : null,
+    ownerAvatar: leader ? leader.avatar_path || null : null,
     claimedAt: leader ? leader.created_at : null,
     leadingSubmission: leader
       ? { id: leader.id, photoUrl: leader.photo_path, voteCount: leader.vote_count }

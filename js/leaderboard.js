@@ -40,10 +40,14 @@ async function loadLeaderboard() {
     for (const row of result.data) {
       const isMe = row.username === me;
 
-      // Your own row gets viewfinder corners (the "vf" class).
-      const li = el("li", isMe ? "leaderboard-row leaderboard-row--me vf" : "leaderboard-row");
+      // Each row links to that player's profile (profile.js opens it).
+      const li = el("li");
+      const link = el("a", isMe ? "leaderboard-row leaderboard-row--me vf" : "leaderboard-row");
+      link.href = profilePath(row.username);
+      link.dataset.profileLink = row.username;
 
-      const avatar = el("span", isMe ? "avatar avatar--me" : "avatar", row.username.charAt(0));
+      const avatar = el("span");
+      avatar.innerHTML = avatarHTML(row.username, row.avatarUrl, { me: isMe });
 
       const player = el("div", "leaderboard-player");
       const name = el("span", "leaderboard-name", row.username);
@@ -55,12 +59,13 @@ async function loadLeaderboard() {
       );
       player.append(name, stats);
 
-      li.append(
+      link.append(
         el("span", "leaderboard-rank", String(row.rank)),
-        avatar,
+        avatar.firstElementChild,
         player,
         el("span", "leaderboard-score", String(row.score))
       );
+      li.append(link);
       leaderboardList.appendChild(li);
     }
   } catch (err) {

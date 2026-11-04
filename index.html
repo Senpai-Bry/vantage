@@ -23,7 +23,7 @@
     crossorigin=""
   />
 
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
 
@@ -60,7 +60,9 @@
         <div id="account-menu" class="account-menu hidden">
           <p class="account-menu-label">Signed in as</p>
           <p id="auth-username-display" class="account-menu-name"></p>
-          <button id="auth-logout-btn" class="account-menu-item" type="button">Log out</button>
+          <a id="account-profile-link" class="account-menu-item" href="/" data-profile-link="">My profile</a>
+          <button id="account-edit-profile" class="account-menu-item" type="button">Edit profile</button>
+          <button id="auth-logout-btn" class="account-menu-item account-menu-item--divided" type="button">Log out</button>
         </div>
       </div>
     </div>
@@ -107,6 +109,19 @@
       <div id="map-preview" class="map-preview hidden"></div>
     </div>
   </main>
+
+  <!-- A player's profile (vantageturf.com/u/<username>). It takes the
+       explore screen's place while it's open; js/profile.js fills it in. -->
+  <section id="profile-view" class="profile-view hidden" aria-live="polite">
+    <div class="profile-wrap">
+      <button id="profile-back" class="back-btn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        Explore
+      </button>
+      <p id="profile-status" class="profile-status" role="status"></p>
+      <div id="profile-content"></div>
+    </div>
+  </section>
 
   <!-- Phones/tablets only: flips between the card feed and the map. -->
   <button id="view-toggle" class="view-toggle" type="button">
@@ -221,6 +236,54 @@
     </div>
   </div>
 
+  <!-- Edit profile window. Only reachable for your own profile. -->
+  <div id="profile-modal" class="modal-backdrop hidden">
+    <div class="modal modal--form" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+      <button id="profile-modal-close" class="close-btn" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <h2 id="profile-modal-title" class="display-title">Edit profile</h2>
+      <p class="panel-desc">This is what other players see when they tap your name.</p>
+
+      <form id="profile-form" novalidate>
+        <div class="avatar-edit">
+          <span id="profile-form-avatar" class="avatar avatar--xl avatar--me"></span>
+          <div class="avatar-edit-actions">
+            <label class="outline-btn" for="profile-form-file">Upload photo</label>
+            <input type="file" id="profile-form-file" class="visually-hidden" accept="image/*" />
+            <button id="profile-form-remove" class="link-btn link-btn--quiet" type="button">Remove</button>
+            <p class="field-hint">Square photos look best. Up to 5MB.</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Home city</span>
+          <input type="text" id="profile-form-city" maxlength="40" list="profile-city-options" placeholder="e.g. Goose Creek" autocomplete="address-level2" />
+        </label>
+        <datalist id="profile-city-options"></datalist>
+
+        <label class="field">
+          <span class="field-label">Shoots on</span>
+          <input type="text" id="profile-form-gear" maxlength="60" placeholder="e.g. iPhone 15 Pro, Fujifilm X100V" />
+        </label>
+
+        <label class="field">
+          <span class="field-label-row">
+            <span class="field-label">Bio</span>
+            <span id="profile-form-bio-count" class="field-count">0 / 160</span>
+          </span>
+          <textarea id="profile-form-bio" maxlength="160" rows="3" placeholder="Tell the city who's behind the lens."></textarea>
+        </label>
+
+        <p id="profile-form-error" class="error-line" role="alert"></p>
+        <div class="modal-actions">
+          <button id="profile-form-cancel" class="text-btn" type="button">Cancel</button>
+          <button id="profile-form-save" class="primary-btn" type="submit">Save profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Leaflet's JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -228,10 +291,11 @@
     crossorigin=""
   ></script>
 
-  <script src="js/api.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/feed.js"></script>
-  <script src="js/leaderboard.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/feed.js"></script>
+  <script src="/js/leaderboard.js"></script>
+  <script src="/js/profile.js"></script>
 </body>
 </html>

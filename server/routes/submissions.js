@@ -7,44 +7,20 @@
 
 const express = require("express");
 const fs = require("fs");
-const path = require("path");
-const multer = require("multer");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 const config = require("../config");
 const requireAuth = require("../middleware/auth");
 const { checkPosition, describeDistance } = require("../lib/geofence");
+const { upload } = require("../lib/uploads");
 
 const router = express.Router();
-
-const UPLOAD_DIR = config.uploadDir;
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: UPLOAD_DIR,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".jpg";
-    const unique = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    cb(null, `${unique}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB — plenty for a phone photo
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith("image/")) {
-      return cb(new Error("Only image files are allowed."));
-    }
-    cb(null, true);
-  },
-});
 
 const SUBMISSIONS_FOR_ZONE = `
   SELECT
     submissions.id, submissions.photo_path, submissions.created_at,
     submissions.challenge_index,
-    users.username,
+    users.username, users.avatar_path,
     COUNT(votes.user_id) AS vote_count
   FROM submissions
   LEFT JOIN votes ON votes.submission_id = submissions.id
@@ -59,6 +35,7 @@ function toSubmissionJSON(row, myVotes) {
     id: row.id,
     photoUrl: row.photo_path,
     username: row.username,
+    avatarUrl: row.avatar_path || null,
     createdAt: row.created_at,
     challengeIndex: row.challenge_index,
     voteCount: row.vote_count,
@@ -151,6 +128,8 @@ router.post("/zones/:id/submissions", requireAuth, (req, res) => {
       id: result.lastInsertRowid,
       photoUrl: photoPath,
       username: req.user.username,
+      avatarUrl:
+        db.prepare("SELECT avatar_path FROM users WHERE id = ?").get(req.user.id)?.avatar_path || null,
       createdAt: Date.now(),
       challengeIndex: zone.current_challenge_index,
       voteCount: 0,

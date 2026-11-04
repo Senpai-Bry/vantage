@@ -67,3 +67,34 @@ async function api(path, { method = "GET", body, auth = false } = {}) {
 
   return data;
 }
+
+// ---------------------------------------------------------------------------
+// Player avatars and profile links (used all over the app)
+// ---------------------------------------------------------------------------
+// These build little HTML strings, so everything a player typed goes
+// through escapeHTML() (defined in app.js) first.
+
+// A round avatar: their profile picture if they have one, otherwise the
+// first letter of their name. size: "sm" (cards), "" (default), "xl"
+// (profile page). me: true for your own (orange).
+function avatarHTML(username, avatarUrl, { size = "", me = false } = {}) {
+  const classes = ["avatar"];
+  if (size) classes.push(`avatar--${size}`);
+  if (me) classes.push("avatar--me");
+  if (avatarUrl) {
+    classes.push("avatar--img");
+    return `<span class="${classes.join(" ")}"><img src="${escapeHTML(avatarUrl)}" alt="" loading="lazy" /></span>`;
+  }
+  return `<span class="${classes.join(" ")}" aria-hidden="true">${escapeHTML(String(username || "?").charAt(0))}</span>`;
+}
+
+// Where a player's profile lives: /u/<username>.
+function profilePath(username) {
+  return `/u/${encodeURIComponent(username)}`;
+}
+
+// A link to a player's profile. js/profile.js catches clicks on these
+// (data-profile-link) and opens the profile without reloading the page.
+function profileLinkHTML(username, text = username, className = "user-link") {
+  return `<a class="${className}" href="${profilePath(username)}" data-profile-link="${escapeHTML(username)}">${escapeHTML(text)}</a>`;
+}

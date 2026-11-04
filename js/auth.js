@@ -72,6 +72,9 @@ function renderAuthPanel() {
   if (loggedIn) {
     const username = Auth.getUsername();
     authUsernameDisplay.textContent = username;
+    // Your initial for now; profile.js swaps in your profile picture once
+    // it has loaded your profile.
+    accountAvatar.className = "avatar avatar--me";
     accountAvatar.textContent = username.charAt(0);
   }
 }

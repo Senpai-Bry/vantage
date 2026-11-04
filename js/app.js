@@ -298,7 +298,7 @@ function refreshPanel() {
   } else if (state === "mine") {
     panelStatus.textContent = "Held by you";
   } else {
-    panelStatus.textContent = `Held by ${zone.owner}`;
+    panelStatus.innerHTML = `<span>Held by</span>${profileLinkHTML(zone.owner)}`;
   }
 
   // Logged out: swap the upload form for a "Log in to submit" prompt.
@@ -373,7 +373,10 @@ function submissionItemHTML(sub, isLeading, zoneName) {
       </div>
       <span class="film-caption">${escapeHTML(filmCaption(sub, zoneName))}</span>
       <div class="turf-submission-info">
-        <span class="turf-submission-user">${escapeHTML(sub.username)}</span>
+        <span class="turf-submission-user">
+          ${avatarHTML(sub.username, sub.avatarUrl, { size: "sm", me: mine })}
+          ${profileLinkHTML(sub.username)}
+        </span>
         <button
           type="button"
           class="turf-submission-vote${sub.votedByMe ? " turf-submission-vote--active" : ""}"
