@@ -465,7 +465,57 @@ async function openProfileModal() {
 
 function closeProfileModal() {
   profileModal.classList.add("hidden");
+  resetDeleteAccount();
 }
+
+// ---------------------------------------------------------------------------
+// Delete account (inside the Edit profile window)
+// ---------------------------------------------------------------------------
+
+const deleteAccountOpen = document.getElementById("delete-account-open");
+const deleteAccountForm = document.getElementById("delete-account-form");
+const deleteAccountPassword = document.getElementById("delete-account-password");
+const deleteAccountError = document.getElementById("delete-account-error");
+const deleteAccountCancel = document.getElementById("delete-account-cancel");
+const deleteAccountConfirm = document.getElementById("delete-account-confirm");
+
+function resetDeleteAccount() {
+  deleteAccountForm.classList.add("hidden");
+  deleteAccountOpen.classList.remove("hidden");
+  deleteAccountForm.reset();
+  deleteAccountError.textContent = "";
+}
+
+deleteAccountOpen.addEventListener("click", () => {
+  deleteAccountOpen.classList.add("hidden");
+  deleteAccountForm.classList.remove("hidden");
+  deleteAccountPassword.focus();
+});
+
+deleteAccountCancel.addEventListener("click", resetDeleteAccount);
+
+deleteAccountForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  deleteAccountError.textContent = "";
+  deleteAccountConfirm.disabled = true;
+  deleteAccountConfirm.textContent = "Deleting…";
+  try {
+    await api("/api/users/me", {
+      method: "DELETE",
+      body: { password: deleteAccountPassword.value },
+      auth: true,
+    });
+    closeProfileModal();
+    Auth.clearSession();
+    // Start fresh on the home page, logged out, with the account gone.
+    window.location.href = "/";
+  } catch (err) {
+    deleteAccountError.textContent = err.message;
+  } finally {
+    deleteAccountConfirm.disabled = false;
+    deleteAccountConfirm.textContent = "Delete forever";
+  }
+});
 
 profileFormFile.addEventListener("change", () => {
   const file = profileFormFile.files[0];

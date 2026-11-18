@@ -11,6 +11,7 @@
 // plain text (never as HTML).
 
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const db = require("../db");
 const requireAuth = require("../middleware/auth");
 const { upload, removeUpload } = require("../lib/uploads");
@@ -125,22 +126,66 @@ router.put("/me", requireAuth, (req, res) => {
     } else if (req.body.removeAvatar === "1") {
       avatarPath = null;
     }
+
+    // Same as photo submissions: this runs after the upload, so a database
+    // error has to be caught here or it would crash the server.
+    try {
+      db.prepare(
+        "UPDATE users SET avatar_path = ?, bio = ?, home_city = ?, gear = ? WHERE id = ?"
+      ).run(
+        avatarPath,
+        fields.bio.value ?? current.bio,
+        fields.homeCity.value ?? current.home_city,
+        fields.gear.value ?? current.gear,
+        req.user.id
+      );
+    } catch (dbErr) {
+      console.error("Saving a profile failed:", dbErr);
+      discardUpload();
+      return res.status(500).json({ error: "Couldn't save your profile. Try again." });
+    }
+
+    // Only delete the old picture once the new one is saved.
     if (avatarPath !== current.avatar_path && current.avatar_path) {
       removeUpload(current.avatar_path);
     }
 
-    db.prepare(
-      "UPDATE users SET avatar_path = ?, bio = ?, home_city = ?, gear = ? WHERE id = ?"
-    ).run(
-      avatarPath,
-      fields.bio.value ?? current.bio,
-      fields.homeCity.value ?? current.home_city,
-      fields.gear.value ?? current.gear,
-      req.user.id
-    );
-
     res.json(toProfileJSON(userByName.get(current.username)));
   });
+});
+
+// DELETE /api/users/me  { password }
+// Permanently deletes your account: your photos, the votes you gave and
+// got, and your profile picture. Your password is asked again so a stolen
+// or forgotten-open login can't wipe an account. Any zone you held goes to
+// the next-best photo, because holders are worked out from submissions.
+router.delete("/me", requireAuth, (req, res) => {
+  const { password } = req.body || {};
+  const user = db
+    .prepare("SELECT id, password_hash, avatar_path FROM users WHERE id = ?")
+    .get(req.user.id);
+  if (!user) return res.status(404).json({ error: "Your account wasn't found. Log in again." });
+  if (typeof password !== "string" || !bcrypt.compareSync(password, user.password_hash)) {
+    return res.status(401).json({ error: "That password isn't right." });
+  }
+
+  const photos = db.prepare("SELECT photo_path FROM submissions WHERE user_id = ?").all(user.id);
+
+  db.transaction(() => {
+    db.prepare("DELETE FROM votes WHERE user_id = ?").run(user.id);
+    db.prepare(
+      "DELETE FROM votes WHERE submission_id IN (SELECT id FROM submissions WHERE user_id = ?)"
+    ).run(user.id);
+    db.prepare("DELETE FROM submissions WHERE user_id = ?").run(user.id);
+    db.prepare("DELETE FROM claims WHERE user_id = ?").run(user.id);
+    db.prepare("DELETE FROM users WHERE id = ?").run(user.id);
+  })();
+
+  // Files go last, once the database part has worked.
+  photos.forEach((row) => removeUpload(row.photo_path));
+  if (user.avatar_path) removeUpload(user.avatar_path);
+
+  res.json({ deleted: true });
 });
 
 module.exports = router;

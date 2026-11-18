@@ -10,6 +10,9 @@
 
 const jwt = require("jsonwebtoken");
 const config = require("../config");
+const db = require("../db");
+
+const userExists = db.prepare("SELECT username FROM users WHERE id = ?");
 
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
@@ -19,13 +22,22 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Log in to do that." });
   }
 
+  let payload;
   try {
-    const payload = jwt.verify(token, config.jwtSecret);
-    req.user = { id: payload.sub, username: payload.username };
-    next();
+    payload = jwt.verify(token, config.jwtSecret);
   } catch (err) {
     return res.status(401).json({ error: "Your session expired — log in again." });
   }
+
+  // A valid token isn't enough on its own: the account has to still exist
+  // (it may have been deleted since the token was handed out).
+  const user = userExists.get(payload.sub);
+  if (!user) {
+    return res.status(401).json({ error: "That account no longer exists. Log in again." });
+  }
+
+  req.user = { id: payload.sub, username: user.username };
+  next();
 }
 
 module.exports = requireAuth;

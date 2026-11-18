@@ -2643,3 +2643,52 @@ a.leaderboard-row--me:hover {
 .eyebrow .user-link {
   margin-left: -3px; /* tighten the gap after "Held by" */
 }
+
+/* ---------- Delete account (Edit profile window) ---------- */
+.danger-zone {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.danger-link {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.danger-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.danger-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.danger-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.danger-btn {
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--danger);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

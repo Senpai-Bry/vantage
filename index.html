@@ -281,6 +281,23 @@
           <button id="profile-form-save" class="primary-btn" type="submit">Save profile</button>
         </div>
       </form>
+
+      <!-- Delete account: hidden behind a link, then asks for your password -->
+      <div class="danger-zone">
+        <button id="delete-account-open" class="text-btn danger-link" type="button">Delete account</button>
+        <form id="delete-account-form" class="danger-form hidden">
+          <p class="danger-text">This permanently deletes your account, your photos and your votes. Any turf you hold goes to the next-best photo. This can't be undone.</p>
+          <label class="field">
+            <span class="field-label">Enter your password to confirm</span>
+            <input type="password" id="delete-account-password" autocomplete="current-password" required />
+          </label>
+          <p id="delete-account-error" class="error-line" role="alert"></p>
+          <div class="danger-actions">
+            <button id="delete-account-cancel" class="text-btn" type="button">Keep my account</button>
+            <button id="delete-account-confirm" class="danger-btn" type="submit">Delete forever</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 

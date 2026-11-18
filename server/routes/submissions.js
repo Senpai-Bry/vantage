@@ -117,12 +117,22 @@ router.post("/zones/:id/submissions", requireAuth, (req, res) => {
     }
 
     const photoPath = `/uploads/${req.file.filename}`;
-    const result = db
-      .prepare(
-        `INSERT INTO submissions (zone_id, user_id, challenge_index, photo_path, created_at)
-         VALUES (?, ?, ?, ?, ?)`
-      )
-      .run(zone.id, req.user.id, zone.current_challenge_index, photoPath, Date.now());
+    // This runs after the upload finishes, outside Express's own error
+    // catching, so a database error here must be caught by hand — otherwise
+    // it would crash the whole server.
+    let result;
+    try {
+      result = db
+        .prepare(
+          `INSERT INTO submissions (zone_id, user_id, challenge_index, photo_path, created_at)
+           VALUES (?, ?, ?, ?, ?)`
+        )
+        .run(zone.id, req.user.id, zone.current_challenge_index, photoPath, Date.now());
+    } catch (dbErr) {
+      console.error("Saving a submission failed:", dbErr);
+      fs.unlink(req.file.path, () => {});
+      return res.status(500).json({ error: "Couldn't save your photo. Try again." });
+    }
 
     res.status(201).json({
       id: result.lastInsertRowid,
