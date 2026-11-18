@@ -26,24 +26,32 @@ app.use("/api", submissionsRouter);
 app.use("/api/leaderboard", leaderboardRouter);
 app.use("/api/users", usersRouter);
 // Uploaded photos, served as plain static files at /uploads/<filename>.
-app.use("/uploads", express.static(config.uploadDir));
+// "nosniff" tells browsers to treat each file only as the image type it's
+// labeled as, never to guess it's a page or script.
+app.use(
+  "/uploads",
+  express.static(config.uploadDir, {
+    setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
+  })
+);
 
-// The frontend is served straight from the project folder (below), so
-// keep the server's own folder out of it — otherwise anyone could
-// download the server code, or (when running locally) the database file.
-app.use("/server", (req, res) => res.status(404).end());
-
-// Everything that isn't an /api/* or /uploads/* route is the frontend —
-// index.html, css/style.css, js/app.js, etc, all live one level up from
-// server/.
-app.use(express.static(path.join(__dirname, "..")));
+// The frontend: only the folders and page the browser actually needs.
+// Everything else in the project (server code, the database when running
+// locally, .git, README, etc.) stays private.
+const ROOT = path.join(__dirname, "..");
+app.use("/css", express.static(path.join(ROOT, "css")));
+app.use("/js", express.static(path.join(ROOT, "js")));
+app.use("/assets", express.static(path.join(ROOT, "assets")));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(ROOT, "index.html"));
+});
 
 // Profile pages have their own address (vantageturf.com/u/<username>), so
 // links to them can be shared. There's no separate page file for them —
 // the same index.html loads, and js/profile.js sees the /u/ address and
 // shows that player's profile.
 app.get("/u/:username", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "index.html"));
+  res.sendFile(path.join(ROOT, "index.html"));
 });
 
 app.listen(config.port, () => {

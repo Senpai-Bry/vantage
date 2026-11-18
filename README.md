@@ -1,231 +1,125 @@
 # Vantage
 
-A GPS-based, turf-control photography game. Players explore a city, claim
-"turf" around real landmarks by completing photo challenges there, and hold
-that turf against other players — inspired by *The Warriors* more than a
-shrinking-zone battle royale.
+**Street photography as a turf war.** Vantage splits a city into zones around
+real landmarks. Each zone has a photo challenge. Players go there, shoot it, and
+the community votes. The top-voted photo holds the zone, and the map is colored
+by who holds what. There's no countdown: you keep your turf until someone takes
+a better shot.
 
-This step adds accounts and a real backend: claims now live in a shared
-database instead of one browser's `localStorage`, so everyone sees the same
-map. Leaflet.js still renders real OpenStreetMap data in a dark, fog-of-war
-style, with four real landmarks in Goose Creek, SC as turf zones you can
-click and claim — but now you sign up, log in, and your claims are visible
-to anyone else who opens the app.
+**Play it live: [vantageturf.com](https://vantageturf.com)**
 
-Still not built: the actual photo-challenge flow (see "Next steps" below).
-Claiming and releasing turf is still just a button for now.
+Built by Bryan Hurst ([Senpai-Bry](https://github.com/Senpai-Bry)) as a
+full-stack portfolio project. The first version covers 22 landmarks across
+Goose Creek, North Charleston, Summerville and Daniel Island, South Carolina.
 
-## Running it
+## Features
 
-Unlike the first prototype, this now needs Node.js (which includes npm)
-installed, because there's a real server. If you don't have it, install it
-from [nodejs.org](https://nodejs.org/) first — any LTS version works.
+- **Real map, real borders.** Zone borders are generated from OpenStreetMap
+  road data, so each zone is bounded by major roads (about half a mile across
+  at most), neighboring zones share an edge, and none overlap.
+- **Rotating photo challenges.** Every zone has a prompt (for example, "Frame
+  the oak canopy over the road") that changes every 72 hours.
+- **Geofence.** A photo only counts if the player's phone shows they're
+  standing inside that zone's border, with 30 meters of slack for GPS drift.
+- **Community voting.** One vote per photo, no voting for your own. When a
+  rival's photo gets more votes, the zone changes hands.
+- **Leaderboard.** 10 points per zone held, plus 1 point per vote received.
+- **Explore feed.** Scrollable zone cards next to the map, with filters (Near
+  me, Open turf, Your turf, Hot right now, by city) and a List/Map switch on
+  phones.
+- **Player profiles** at `/u/<username>`: picture, bio, home city, camera gear,
+  stats, turf held and every photo submitted.
+- **Rules enforced on the server.** Logins, the geofence, voting and uploads are
+  all checked by the server, so going around the app's buttons doesn't work.
 
-1. **Install the server's dependencies** (one-time, or whenever
-   `server/package.json` changes):
-   ```
-   cd server
-   npm install
-   ```
-2. **Create your local config.** Copy `server/.env.example` to `server/.env`
-   and fill in a `JWT_SECRET` (a random string used to sign login sessions —
-   the example file has a command that generates one for you). `.env` is
-   gitignored on purpose; it's your local secret, never commit it.
-3. **Start the server:**
-   ```
-   npm start
-   ```
-   (still inside the `server/` folder). You should see
-   `Vantage server running at http://localhost:5000`.
-4. **Open the app:** go to `http://localhost:5000` in your browser. The
-   server serves the frontend files itself, so that's the only URL you
-   need — you don't open `index.html` directly anymore, and you don't need
-   Live Server for this step.
+## Tech stack
 
-To stop the server, go back to that terminal and press `Ctrl+C`.
+| Part | Tools |
+| --- | --- |
+| Frontend | HTML, CSS, plain JavaScript (no framework), Leaflet.js |
+| Backend | Node.js, Express |
+| Database | SQLite (better-sqlite3) |
+| Accounts | bcryptjs password hashing, JSON Web Tokens |
+| Uploads | Multer (JPG, PNG, WebP and HEIC, up to 5 MB) |
+| Map data | OpenStreetMap (via the Overpass API), JSTS for border geometry, Esri map tiles |
+| Hosting | Railway (with a persistent disk for the database and photos), Porkbun DNS |
+
+## Running it locally
+
+You need [Node.js](https://nodejs.org/) (any LTS version).
+
+```
+cd server
+npm install
+npm start
+```
+
+Then open **http://localhost:5000**. The server serves both the website and
+the API, so that's the only address you need. Press `Ctrl+C` in the terminal
+to stop it.
+
+Settings are optional. To change them, copy `server/.env.example` to
+`server/.env`. Useful ones while testing:
+
+- `GEOFENCE=off` lets you submit photos without being at the zone.
+- `CHALLENGE_ROTATION_HOURS=0.02` rotates challenges about once a minute.
+- `JWT_SECRET` signs login sessions. If you leave it out, the server generates
+  one and saves it next to the database.
+
+`.env`, the database and uploaded photos are kept out of Git on purpose.
 
 ## Project structure
 
 ```
 vantage/
-├── index.html            the page itself — loads Leaflet, then our scripts
-├── css/
-│   └── style.css          dark theme, header, account panel, turf marker glow, info panel
+├── index.html              the single page the app runs in
+├── css/style.css           all styling
 ├── js/
-│   ├── api.js              tiny fetch() wrapper + localStorage token helpers
-│   ├── auth.js              wires up the sign up / log in / log out panel
-│   ├── app.js               creates the map, loads zones from the API, the zone panel
-│   ├── feed.js              the explore feed: zone cards, filter chips, List/Map button
-│   ├── leaderboard.js        the leaderboard panel
-│   └── profile.js            player profiles (/u/<username>) and the Edit profile window
-├── assets/                 (empty for now — icons/images go here later)
+│   ├── api.js              fetch helper, login token storage, shared helpers
+│   ├── auth.js             sign up / log in / log out and the account menu
+│   ├── app.js              the map, turf borders and the zone panel (submit, vote)
+│   ├── feed.js             explore feed: zone cards, filters, List/Map switch
+│   ├── leaderboard.js      leaderboard panel
+│   └── profile.js          profile pages and the Edit profile window
 └── server/
-    ├── index.js             starts the server — API routes + serves the frontend
-    ├── config.js             reads .env (PORT, JWT_SECRET, CLIENT_ORIGIN)
-    ├── db.js                 sets up SQLite, creates tables, seeds zones from data/landmarks.js
+    ├── index.js            starts the server: API routes + the website's files
+    ├── config.js           reads settings from .env
+    ├── db/index.js         creates the SQLite tables and loads the zones
     ├── data/
-    │   └── landmarks.js       the turf zone list — edit this to add/change a zone
-    ├── middleware/
-    │   └── auth.js            checks the login token on protected routes
-    ├── routes/
-    │   ├── auth.js             POST /api/auth/signup, POST /api/auth/login
-    │   ├── zones.js             GET /api/zones
-    │   ├── submissions.js        photo submissions and votes
-    │   ├── leaderboard.js        GET /api/leaderboard
-    │   └── users.js              GET /api/users/:username, PUT /api/users/me (profiles)
-    ├── .env.example           template for your local server/.env
-    └── db/                    the SQLite database file lives here (gitignored)
+    │   ├── landmarks.js    the 22 zones and their challenge prompts
+    │   ├── boundaries.json generated turf borders
+    │   └── landmark-photos.json  credited Wikimedia cover photos
+    ├── lib/                challenges, geofence, scores, uploads, photos
+    ├── middleware/auth.js  checks the login token on protected routes
+    ├── routes/             auth, zones, submissions + votes, leaderboard, users
+    └── scripts/            fetch-osm, build-turf, fetch-photos (data builders)
 ```
 
-The zone data moved from a frontend file into `server/data/landmarks.js`,
-since ownership is now shared — the server has to be the one source of
-truth everyone's browser talks to. To add a new turf zone: add an entry to
-that file and restart the server. Nothing else needs to change.
+**Adding a zone:** add an entry to `server/data/landmarks.js`, then rebuild the
+borders with `npm run fetch-osm` and `npm run build-turf` (inside `server/`)
+and restart the server.
 
-## How it works, in plain terms
+## Security notes
 
-**Accounts.** The header has a small sign-up/log-in form. Passwords are
-never stored as-is — `server/routes/auth.js` hashes them with `bcryptjs`
-before saving, and a successful login gets you back a JWT (a signed token)
-that proves who you are without sending your password again. The frontend
-keeps that token in `localStorage` and attaches it as an
-`Authorization: Bearer <token>` header on any request that needs to know
-who you are.
+- Passwords are stored only as bcrypt hashes.
+- Usernames are 3-20 letters, numbers, `_` or `-`, and capitals don't count as
+  a different name, so nobody can pose as another player.
+- Uploads must be real photo types. The server picks each file's extension and
+  serves uploads with `nosniff`, so a disguised file can't run as a web page.
+- Only the website's own files (`index.html`, `css/`, `js/`, `assets/`) are
+  served. The server code, database and `.git` folder stay private.
+- Everything players type is shown as plain text, never as HTML.
 
-**Zones and claims.** `GET /api/zones` returns every turf zone along with
-whoever currently holds it (if anyone). Clicking a marker opens the same
-info panel as before, but the claim button now reflects reality for
-*everyone*: if someone else holds a zone, you'll see "Already claimed" and
-who holds it, and the button is disabled — clicking wouldn't work anyway,
-because the server checks ownership on every claim/release request too,
-not just the button's disabled state.
+## What's next
 
-**Claiming.** Clicking "Claim this turf" sends `POST /api/zones/:id/claim`
-with your login token. The server only allows one claim per zone at a time
-(enforced by the database itself, not just application logic), so if two
-people click at nearly the same moment, exactly one of them wins and the
-other gets a clear "someone already holds that turf" response.
+- A countdown on each zone showing when the next challenge starts
+- An in-app camera that records location at the moment of the shot
+- Crews (team play)
+- Skill-based divisions instead of one leaderboard
+- Step and distance tracking
+- Sponsored zones for local businesses
 
-**Releasing.** "Release this turf" sends a `DELETE` to that same URL. Only
-the zone's current owner can release it — the server checks this and
-returns a 403 for anyone else, even if they somehow bypassed the disabled
-button.
+## Credits
 
-## Turf borders
-
-Each zone's turf on the map is made of real city blocks: every edge runs
-along a street, railroad track or shoreline. A block belongs to a zone if
-its middle is within 0.5 miles of that zone's landmark and that landmark
-is the closest one to it, so neighboring zones share borders along streets
-instead of overlapping. Zones also stay on their landmark's side of the
-big roads around it.
-
-Building them takes two steps, from the `server/` folder:
-
-```
-npm run fetch-osm      # download the street maps (needs internet, ~10 min the first time)
-npm run build-turf     # draw the borders from them (offline, a few seconds)
-```
-
-`fetch-osm` saves the maps to `server/data/osm-cache/` (not committed) and
-skips zones it already has, so after adding a landmark it only downloads
-the new one. `build-turf` writes `server/data/boundaries.json`, which is
-committed. Restart the server afterward to see the new borders.
-
-## Explore feed and card photos
-
-Next to the map is a scrolling feed of zone cards, like the listings on
-Airbnb. Each card shows a photo, who holds the zone, its current challenge
-and, after you tap **Near me**, how far away it is. The chips across the top
-filter the feed: open turf, your turf, hot right now (most votes this week),
-and one chip per city (made from the `city` field in
-`server/data/landmarks.js`, so a new city gets a chip automatically).
-
-- **On a computer** the feed and map sit side by side. Hovering a card
-  lights its zone up on the map, and clicking a zone on the map highlights
-  and scrolls to its card.
-- **On a phone or tablet** you see one at a time. The **Map** button flips
-  to the map; tapping a dot there shows one small preview card, and tapping
-  that opens the zone.
-
-The photo on a card is the zone's top-voted player photo. Until somebody
-shoots a zone, it shows a free photo of the landmark from Wikimedia Commons,
-credited to its photographer (that's the deal for using them). To find
-those, from the `server/` folder:
-
-```
-npm run fetch-photos      # look up a photo for every zone that doesn't have one (needs internet)
-```
-
-It saves them to `server/data/landmark-photos.json` (committed). Restart the
-server afterward. If it picks a bad photo for a zone, find a better one on
-commons.wikimedia.org, put its file name in that landmark's `photo` field
-(e.g. `photo: "File:Some photo.jpg"`), and run
-`npm run fetch-photos -- zone-id` to swap it in. Zones with no photo at all
-get a "Be the first to shoot this" card.
-
-## Player profiles
-
-Every player has a profile page at `/u/<username>` (for example
-`vantageturf.com/u/senpaibry`), so a profile link can be shared.
-
-- **What's on it:** profile picture, home city, what they shoot on, a short
-  bio, their stats (zones held, votes, leaderboard rank), the turf they
-  hold (the same cards as the explore feed), and every photo they've
-  submitted. Photos still holding their zone get a HOLDING badge.
-- **Getting there:** every username in the app links to that player's
-  profile: on zone cards, in the zone panel, on photos, and on the
-  leaderboard. Your own is under **My profile** in the account menu.
-- **Editing:** on your own profile (or **Edit profile** in the account
-  menu). The profile picture reuses the same upload code as zone photos
-  (`server/lib/uploads.js`), and the old picture is deleted when you
-  replace it.
-- **Scores** (rank, zones held, votes) come from `server/lib/scores.js`,
-  the same code the leaderboard uses, so the two always agree.
-
-There's no separate page file for profiles: the server sends `index.html`
-for any `/u/...` address and `js/profile.js` reads the address to decide
-which profile to show.
-
-## Geofence (you have to be there)
-
-A photo only counts if it's submitted from inside the zone's turf border.
-When you hit "Submit photo", the browser asks for your location and sends
-it with the photo; the server checks it against the zone's border
-(`server/lib/geofence.js`) and turns the photo away if you're outside,
-with a message saying how far away you are. Zones without a border yet
-fall back to "within half a mile of the landmark".
-
-Testing from home:
-
-- **Fake your location (recommended):** in Chrome, open DevTools (F12),
-  press Ctrl + Shift + P, type "Sensors", and set a custom location to a
-  point inside a zone (right-click the spot on Google Maps to copy its
-  coordinates). Submitting then behaves as if you were standing there.
-- **Or switch it off:** set `GEOFENCE=off` in `server/.env` and restart.
-
-Browsers only share location on secure pages: `localhost` works, and so
-will an `https://` address once Vantage is deployed.
-
-## A note on coordinates
-
-The coordinates in `server/data/landmarks.js` are pulled from public
-sources (school directory listings, Wikipedia, OpenStreetMap-derived map
-data, the city's own contact page). Goose Creek High School, St. James
-Church, and Stratford High School are sourced from public mapping data and
-should be accurate; Goose Creek City Hall is a close estimate off its
-street address rather than a verified pin. Nudge any of them if you want a
-marker sitting exactly on a building — right-click the spot on Google Maps
-to copy exact coordinates, then paste them into that landmark's `coords`
-array.
-
-## Next steps (not built yet)
-
-- Photo challenge flow (upload/take a photo at a zone to actually earn a
-  claim, instead of just clicking a button).
-- Skill-based divisions instead of one global leaderboard.
-- Step-counter / distance-tracking element.
-- Add more landmarks to `server/data/landmarks.js` for the full v1 list.
-- Deploying the server somewhere real (right now it's local-only —
-  `localhost`), so it's not just you and people on your own machine who
-  can play.
+Map data © OpenStreetMap contributors. Map tiles © Esri. Landmark cover
+photos are from Wikimedia Commons and credited in the app.

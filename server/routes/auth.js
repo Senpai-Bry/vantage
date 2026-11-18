@@ -12,8 +12,11 @@ const config = require("../config");
 
 const router = express.Router();
 
-const MIN_USERNAME_LENGTH = 3;
 const MIN_PASSWORD_LENGTH = 8;
+
+// 3-20 letters, numbers, _ or -. Keeps names readable everywhere they show
+// up (cards, leaderboard, /u/<name> links) and stops look-alike tricks.
+const USERNAME_PATTERN = /^[A-Za-z0-9_-]{3,20}$/;
 
 function signToken(user) {
   return jwt.sign({ sub: user.id, username: user.username }, config.jwtSecret, {
@@ -24,9 +27,9 @@ function signToken(user) {
 router.post("/signup", (req, res) => {
   const { username, password } = req.body || {};
 
-  if (typeof username !== "string" || username.trim().length < MIN_USERNAME_LENGTH) {
+  if (typeof username !== "string" || !USERNAME_PATTERN.test(username.trim())) {
     return res.status(400).json({
-      error: `Username must be at least ${MIN_USERNAME_LENGTH} characters.`,
+      error: "Username must be 3-20 characters: letters, numbers, _ or -.",
     });
   }
   if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
@@ -36,6 +39,16 @@ router.post("/signup", (req, res) => {
   }
 
   const cleanUsername = username.trim();
+
+  // "Alice" and "alice" count as the same name, so nobody can pose as
+  // another player by changing capitals.
+  const taken = db
+    .prepare("SELECT 1 FROM users WHERE username = ? COLLATE NOCASE")
+    .get(cleanUsername);
+  if (taken) {
+    return res.status(409).json({ error: "That username is already taken." });
+  }
+
   const passwordHash = bcrypt.hashSync(password, 10);
 
   try {
@@ -63,7 +76,7 @@ router.post("/login", (req, res) => {
   }
 
   const user = db
-    .prepare("SELECT id, username, password_hash FROM users WHERE username = ?")
+    .prepare("SELECT id, username, password_hash FROM users WHERE username = ? COLLATE NOCASE")
     .get(username.trim());
 
   // Same error for "no such user" and "wrong password" — don't give an
