@@ -1366,6 +1366,49 @@ button {
   line-height: 1.4;
 }
 
+/* Check-in box */
+
+.checkin-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-strong, #cfcfcf);
+  border-radius: 12px;
+}
+
+.checkin-box--active {
+  border-style: solid;
+  border-color: var(--text);
+}
+
+.checkin-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.checkin-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.checkin-box--active .checkin-title::before {
+  content: "✓ ";
+}
+
+.checkin-hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+.checkin-box .outline-btn {
+  flex-shrink: 0;
+}
+
 /* Submit-a-photo form */
 
 #turf-submit-form {

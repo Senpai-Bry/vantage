@@ -178,6 +178,7 @@ router.delete("/me", requireAuth, (req, res) => {
     ).run(user.id);
     db.prepare("DELETE FROM submissions WHERE user_id = ?").run(user.id);
     db.prepare("DELETE FROM claims WHERE user_id = ?").run(user.id);
+    db.prepare("DELETE FROM checkins WHERE user_id = ?").run(user.id);
     db.prepare("DELETE FROM users WHERE id = ?").run(user.id);
   })();
 

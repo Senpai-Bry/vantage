@@ -13,6 +13,23 @@ const config = require("../config");
 const requireAuth = require("../middleware/auth");
 const { checkPosition, describeDistance } = require("../lib/geofence");
 const { upload } = require("../lib/uploads");
+const { recordCheckin, activeCheckin, activeCheckins } = require("../lib/checkins");
+
+// A photo's own location tag (read by the browser before upload) can be a
+// little off, because many cameras get their location from the phone over
+// Bluetooth. Only a tag clearly far from the zone gets a photo rejected.
+const PHOTO_TAG_SLACK_M = 400;
+
+// Reads lat/lng form fields; returns [lat, lng] or null if missing/invalid.
+function readPosition(latValue, lngValue) {
+  if (latValue === undefined || lngValue === undefined || latValue === "" || lngValue === "") return null;
+  const lat = Number(latValue);
+  const lng = Number(lngValue);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    return null;
+  }
+  return [lat, lng];
+}
 
 const router = express.Router();
 
@@ -96,23 +113,45 @@ router.post("/zones/:id/submissions", requireAuth, (req, res) => {
       return res.status(404).json({ error: "No such zone." });
     }
 
-    // Geofence: the photo only counts if it was sent from inside the zone.
-    // The phone's location arrives as two extra form fields, lat and lng.
-    if (config.geofenceEnabled) {
-      const lat = Number(req.body.lat);
-      const lng = Number(req.body.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
-        fs.unlink(req.file.path, () => {});
-        return res.status(400).json({
-          error: "Vantage needs your location to check you're at this zone. Allow location access and try again.",
-        });
+    const reject = (status, error) => {
+      fs.unlink(req.file.path, () => {});
+      return res.status(status).json({ error });
+    };
+
+    // The photo's own location tag, if it had one. Catches picking the
+    // wrong photo (or one from somewhere else entirely).
+    const photoTag = readPosition(req.body.photoLat, req.body.photoLng);
+    if (photoTag && config.geofenceEnabled) {
+      const { distanceM } = checkPosition(zone, photoTag);
+      if (distanceM > PHOTO_TAG_SLACK_M) {
+        return reject(
+          403,
+          `This photo's location tag says it was taken ${describeDistance(distanceM)} from ${zone.name}'s turf. Pick a photo you took there.`
+        );
       }
-      const { inside, distanceM } = checkPosition(zone, [lat, lng]);
-      if (!inside) {
-        fs.unlink(req.file.path, () => {});
-        return res.status(403).json({
-          error: `You need to be inside ${zone.name}'s turf to submit here. You're ${describeDistance(distanceM)} away.`,
-        });
+    }
+
+    // Geofence: you need to be inside the zone right now, OR have checked
+    // in there within the upload window.
+    if (config.geofenceEnabled) {
+      const here = readPosition(req.body.lat, req.body.lng);
+      const hereCheck = here ? checkPosition(zone, here) : null;
+
+      if (hereCheck && hereCheck.inside) {
+        // Standing in the zone: this upload checks you in too.
+        recordCheckin(req.user.id, zone.id);
+      } else if (!activeCheckin(req.user.id, zone.id)) {
+        const hours = Math.round(config.checkinWindowMs / 3600000);
+        if (hereCheck) {
+          return reject(
+            403,
+            `You're ${describeDistance(hereCheck.distanceM)} from ${zone.name}'s turf. Check in when you're there, then you'll have ${hours} hours to upload from anywhere.`
+          );
+        }
+        return reject(
+          400,
+          `Check in at ${zone.name} first. Once you have, you can upload from anywhere for ${hours} hours. Or allow location access while you're there.`
+        );
       }
     }
 
@@ -184,6 +223,41 @@ router.post("/submissions/:id/vote", requireAuth, (req, res) => {
     .get(submissionId);
 
   res.json({ voteCount: n, votedByMe: !existing });
+});
+
+// POST /api/zones/:id/checkin  { lat, lng }
+// Checks you in at a zone. Needs your live location, inside the border.
+router.post("/zones/:id/checkin", requireAuth, (req, res) => {
+  const zone = db
+    .prepare("SELECT id, name, lat, lng FROM zones WHERE id = ?")
+    .get(req.params.id);
+  if (!zone) return res.status(404).json({ error: "No such zone." });
+
+  if (config.geofenceEnabled) {
+    const here = readPosition((req.body || {}).lat, (req.body || {}).lng);
+    if (!here) {
+      return res.status(400).json({
+        error: "Vantage needs your location to check you in. Allow location access and try again.",
+      });
+    }
+    const { inside, distanceM } = checkPosition(zone, here);
+    if (!inside) {
+      return res.status(403).json({
+        error: `You need to be inside ${zone.name}'s turf to check in. You're ${describeDistance(distanceM)} away.`,
+      });
+    }
+  }
+
+  res.status(201).json(recordCheckin(req.user.id, zone.id));
+});
+
+// GET /api/checkins — your open check-ins, so the app can show which zones
+// you can upload to and how long you have left.
+router.get("/checkins", requireAuth, (req, res) => {
+  res.json({
+    windowHours: config.checkinWindowMs / 3600000,
+    checkins: activeCheckins(req.user.id),
+  });
 });
 
 module.exports = router;

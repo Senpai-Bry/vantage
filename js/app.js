@@ -212,6 +212,11 @@ const submitStatus = document.getElementById("turf-submit-status");
 const loginPrompt = document.getElementById("turf-login-prompt");
 const loginPromptBtn = document.getElementById("turf-login-btn");
 
+const checkinBox = document.getElementById("turf-checkin");
+const checkinTitle = document.getElementById("turf-checkin-title");
+const checkinHint = document.getElementById("turf-checkin-hint");
+const checkinBtn = document.getElementById("turf-checkin-btn");
+
 const submissionsList = document.getElementById("turf-submissions-list");
 const submissionsCount = document.getElementById("turf-submissions-count");
 
@@ -305,7 +310,95 @@ function refreshPanel() {
   const loggedIn = Auth.isLoggedIn();
   submitForm.classList.toggle("hidden", !loggedIn);
   loginPrompt.classList.toggle("hidden", loggedIn);
+  renderCheckin();
 }
+
+// ---------------------------------------------------------------------------
+// Check-ins
+// ---------------------------------------------------------------------------
+// Checking in at a zone (you have to be inside it) lets you upload a photo
+// for that zone from anywhere for a while: 48 hours on the real site. It's
+// for photographers who shoot on a camera and edit before posting.
+// Uploading while you're standing in the zone checks you in automatically.
+
+let myCheckins = {}; // zoneId -> expiresAt (milliseconds)
+let checkinWindowHours = 48;
+
+async function loadMyCheckins() {
+  if (!Auth.isLoggedIn()) {
+    myCheckins = {};
+    renderCheckin();
+    return;
+  }
+  try {
+    const data = await api("/api/checkins", { auth: true });
+    checkinWindowHours = data.windowHours;
+    myCheckins = Object.fromEntries(data.checkins.map((c) => [c.zoneId, c.expiresAt]));
+  } catch (err) {
+    console.error("Couldn't load your check-ins:", err);
+  }
+  renderCheckin();
+}
+
+function checkinExpiresAt(zoneId) {
+  const expiresAt = myCheckins[zoneId];
+  return expiresAt && expiresAt > Date.now() ? expiresAt : null;
+}
+
+// "Fri 3:42 PM"
+function formatDeadline(ms) {
+  return new Date(ms).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+}
+
+// "47h left" / "35m left"
+function formatTimeLeft(ms) {
+  const minutes = Math.max(1, Math.round((ms - Date.now()) / 60000));
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}h left` : `${minutes}m left`;
+}
+
+function renderCheckin() {
+  const show = Boolean(activeZoneId) && Auth.isLoggedIn();
+  checkinBox.classList.toggle("hidden", !show);
+  if (!show) return;
+
+  const expiresAt = checkinExpiresAt(activeZoneId);
+  checkinBox.classList.toggle("checkin-box--active", Boolean(expiresAt));
+  checkinBtn.classList.toggle("hidden", Boolean(expiresAt));
+  if (expiresAt) {
+    checkinTitle.textContent = "Checked in";
+    checkinHint.textContent = `Upload from anywhere until ${formatDeadline(expiresAt)} (${formatTimeLeft(expiresAt)}).`;
+  } else {
+    checkinTitle.textContent = "Shooting on a camera?";
+    checkinHint.textContent = `Check in while you're here, then upload from anywhere for ${checkinWindowHours} hours.`;
+  }
+}
+
+checkinBtn.addEventListener("click", async () => {
+  if (!activeZoneId) return;
+  const zoneId = activeZoneId;
+  checkinBtn.disabled = true;
+  try {
+    submitStatus.textContent = "Checking your location…";
+    const position = await getLocation();
+    const checkin = await api(`/api/zones/${zoneId}/checkin`, {
+      method: "POST",
+      body: { lat: position.coords.latitude, lng: position.coords.longitude },
+      auth: true,
+    });
+    myCheckins[zoneId] = checkin.expiresAt;
+    submitStatus.textContent = "Checked in! Shoot away.";
+    renderCheckin();
+  } catch (err) {
+    submitStatus.textContent = err.message;
+  } finally {
+    checkinBtn.disabled = false;
+  }
+});
+
+// Keep the "47h left" text current while a panel is open.
+setInterval(() => {
+  if (activeZoneId) renderCheckin();
+}, 60000);
 
 function resetSubmitForm() {
   submitForm.reset();
@@ -467,15 +560,27 @@ submitForm.addEventListener("submit", async (event) => {
   submitBtn.disabled = true;
 
   try {
-    // Geofence: the server only accepts the photo if you're inside the
-    // zone, so send along where your phone says you are.
-    submitStatus.textContent = "Checking your location…";
-    const position = await getLocation();
+    // Read the photo's location tag first (shrinking removes it), then
+    // shrink big camera photos so they upload fast and fit the size limit.
+    submitStatus.textContent = "Preparing your photo…";
+    const photoTag = await readPhotoLocation(file);
+    const photo = await shrinkPhoto(file);
 
     const formData = new FormData();
-    formData.append("lat", position.coords.latitude);
-    formData.append("lng", position.coords.longitude);
-    formData.append("photo", file);
+    formData.append("photo", photo);
+    if (photoTag) {
+      formData.append("photoLat", photoTag.lat);
+      formData.append("photoLng", photoTag.lng);
+    }
+
+    // Checked in here already? Then you can upload from anywhere. If not,
+    // the server needs to see you're inside the zone right now.
+    if (!checkinExpiresAt(zoneId)) {
+      submitStatus.textContent = "Checking your location…";
+      const position = await getLocation();
+      formData.append("lat", position.coords.latitude);
+      formData.append("lng", position.coords.longitude);
+    }
 
     submitStatus.textContent = "Uploading…";
     await api(`/api/zones/${zoneId}/submissions`, {
@@ -485,6 +590,7 @@ submitForm.addEventListener("submit", async (event) => {
     });
     resetSubmitForm();
     submitStatus.textContent = "Submitted!";
+    loadMyCheckins(); // uploading on the spot checks you in
     await loadSubmissions(zoneId);
     await refreshZone(zoneId);
   } catch (err) {
@@ -515,8 +621,11 @@ document.addEventListener("vantage:auth-changed", async () => {
   } catch (err) {
     console.error("Couldn't refresh turf zones:", err);
   }
+  loadMyCheckins();
   if (activeZoneId) {
     refreshPanel();
     loadSubmissions(activeZoneId);
   }
 });
+
+loadMyCheckins();

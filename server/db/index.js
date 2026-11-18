@@ -64,6 +64,16 @@ db.exec(`
     created_at INTEGER NOT NULL,
     PRIMARY KEY (submission_id, user_id)
   );
+
+  -- One row each time a player checks in at a zone in person. A check-in
+  -- lets them upload to that zone from anywhere for a while afterwards.
+  CREATE TABLE IF NOT EXISTS checkins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    zone_id TEXT NOT NULL REFERENCES zones(id),
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS checkins_user_zone ON checkins (user_id, zone_id, created_at);
 `);
 
 // --- Migration: add the two rotation columns to `zones` if this database

@@ -19,8 +19,15 @@ Goose Creek, North Charleston, Summerville and Daniel Island, South Carolina.
   at most), neighboring zones share an edge, and none overlap.
 - **Rotating photo challenges.** Every zone has a prompt (for example, "Frame
   the oak canopy over the road") that changes every 72 hours.
-- **Geofence.** A photo only counts if the player's phone shows they're
-  standing inside that zone's border, with 30 meters of slack for GPS drift.
+- **Geofence with check-ins.** To submit, you have to prove you were there.
+  Either upload while your phone shows you inside the zone's border (with 30
+  meters of slack for GPS drift), or **check in** there and then upload from
+  anywhere within 48 hours. That way photographers can shoot on a camera,
+  edit at home, and post from a laptop.
+- **Photo location check.** If a photo has a location tag saved in it and
+  that tag is far from the zone, it's rejected.
+- **Big camera photos just work.** The browser shrinks photos to 2560 pixels
+  before uploading, so 20 MB camera JPGs upload fast.
 - **Community voting.** One vote per photo, no voting for your own. When a
   rival's photo gets more votes, the zone changes hands.
 - **Leaderboard.** 10 points per zone held, plus 1 point per vote received.
@@ -40,7 +47,7 @@ Goose Creek, North Charleston, Summerville and Daniel Island, South Carolina.
 | Backend | Node.js, Express |
 | Database | SQLite (better-sqlite3) |
 | Accounts | bcryptjs password hashing, JSON Web Tokens |
-| Uploads | Multer (JPG, PNG, WebP and HEIC, up to 5 MB) |
+| Uploads | Multer (JPG, PNG, WebP and HEIC, up to 5 MB), resized in the browser with Canvas |
 | Map data | OpenStreetMap (via the Overpass API), JSTS for border geometry, Esri map tiles |
 | Hosting | Railway (with a persistent disk for the database and photos), Porkbun DNS |
 
@@ -63,6 +70,8 @@ Settings are optional. To change them, copy `server/.env.example` to
 
 - `GEOFENCE=off` lets you submit photos without being at the zone.
 - `CHALLENGE_ROTATION_HOURS=0.02` rotates challenges about once a minute.
+- `CHECKIN_HOURS=0.02` makes check-ins expire after about a minute (48 is
+  the real setting).
 - `JWT_SECRET` signs login sessions. If you leave it out, the server generates
   one and saves it next to the database.
 
@@ -77,7 +86,8 @@ vantage/
 ├── js/
 │   ├── api.js              fetch helper, login token storage, shared helpers
 │   ├── auth.js             sign up / log in / log out and the account menu
-│   ├── app.js              the map, turf borders and the zone panel (submit, vote)
+│   ├── photo.js            reads a photo's location tag, shrinks big photos
+│   ├── app.js              the map, turf borders, the zone panel (check in, submit, vote)
 │   ├── feed.js             explore feed: zone cards, filters, List/Map switch
 │   ├── leaderboard.js      leaderboard panel
 │   └── profile.js          profile pages and the Edit profile window
@@ -89,7 +99,7 @@ vantage/
     │   ├── landmarks.js    the 22 zones and their challenge prompts
     │   ├── boundaries.json generated turf borders
     │   └── landmark-photos.json  credited Wikimedia cover photos
-    ├── lib/                challenges, geofence, scores, uploads, photos
+    ├── lib/                challenges, check-ins, geofence, scores, uploads, photos
     ├── middleware/auth.js  checks the login token on protected routes
     ├── routes/             auth, zones, submissions + votes, leaderboard, users
     └── scripts/            fetch-osm, build-turf, fetch-photos (data builders)
@@ -109,6 +119,7 @@ and restart the server.
 - Only the website's own files (`index.html`, `css/`, `js/`, `assets/`) are
   served. The server code, database and `.git` folder stay private.
 - Everything players type is shown as plain text, never as HTML.
+- A deleted account's old login stops working right away.
 
 ## What's next
 

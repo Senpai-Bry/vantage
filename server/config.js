@@ -25,6 +25,11 @@ const config = {
   // (or keep it on and fake your location with Chrome DevTools — see README).
   geofenceEnabled: (process.env.GEOFENCE || "on").toLowerCase() !== "off",
 
+  // Check-ins: checking in at a zone (live GPS, inside the border) opens an
+  // upload window for that zone, so photographers can shoot on a camera,
+  // edit at home, and upload later from any device.
+  checkinWindowMs: Number(process.env.CHECKIN_HOURS || 48) * 60 * 60 * 1000,
+
   challengeRotationMs:
     Number(process.env.CHALLENGE_ROTATION_HOURS || 72) * 60 * 60 * 1000,
 };
