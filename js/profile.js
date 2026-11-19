@@ -517,11 +517,16 @@ deleteAccountForm.addEventListener("submit", async (event) => {
   }
 });
 
-profileFormFile.addEventListener("change", () => {
-  const file = profileFormFile.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) {
-    profileFormError.textContent = "That photo is over 5MB. Try a smaller one.";
+profileFormFile.addEventListener("change", async () => {
+  const picked = profileFormFile.files[0];
+  if (!picked) return;
+  // Same prep as zone photos (photo.js): shrinks big photos and drops
+  // hidden details like GPS before anything is uploaded.
+  let file;
+  try {
+    file = await shrinkPhoto(picked);
+  } catch (err) {
+    profileFormError.textContent = err.message;
     profileFormFile.value = "";
     return;
   }

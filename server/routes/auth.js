@@ -5,6 +5,7 @@
 // could read anyone's actual password back out of it.
 
 const express = require("express");
+const { signupLimit, loginLimit } = require("../lib/limits");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
@@ -24,7 +25,7 @@ function signToken(user) {
   });
 }
 
-router.post("/signup", (req, res) => {
+router.post("/signup", signupLimit, (req, res) => {
   const { username, password } = req.body || {};
 
   if (typeof username !== "string" || !USERNAME_PATTERN.test(username.trim())) {
@@ -68,7 +69,7 @@ router.post("/signup", (req, res) => {
   }
 });
 
-router.post("/login", (req, res) => {
+router.post("/login", loginLimit, (req, res) => {
   const { username, password } = req.body || {};
 
   if (typeof username !== "string" || typeof password !== "string") {

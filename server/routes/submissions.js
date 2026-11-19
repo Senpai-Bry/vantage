@@ -6,13 +6,14 @@
 // "claim" action anymore, a winning photo IS the claim.
 
 const express = require("express");
+const { uploadLimit, voteLimit, checkinLimit } = require("../lib/limits");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 const config = require("../config");
 const requireAuth = require("../middleware/auth");
 const { checkPosition, describeDistance } = require("../lib/geofence");
-const { upload } = require("../lib/uploads");
+const { upload, cleanPhoto } = require("../lib/uploads");
 const { recordCheckin, activeCheckin, activeCheckins } = require("../lib/checkins");
 
 // A photo's own location tag (read by the browser before upload) can be a
@@ -96,8 +97,20 @@ router.get("/zones/:id/submissions", (req, res) => {
 
 // POST /api/zones/:id/submissions — submit a photo to this zone's current
 // challenge. "photo" is the field name the frontend's FormData uses.
-router.post("/zones/:id/submissions", requireAuth, (req, res) => {
+router.post("/zones/:id/submissions", requireAuth, uploadLimit, (req, res) => {
   upload.single("photo")(req, res, (err) => {
+    // The rest runs as an async function (photo cleaning takes a moment).
+    // Anything unexpected becomes a 500 reply instead of crashing the server.
+    handleSubmission(req, res, err).catch((unexpected) => {
+      console.error("Submission failed:", unexpected);
+      if (req.file) fs.unlink(req.file.path, () => {});
+      if (!res.headersSent) res.status(500).json({ error: "Something went wrong. Try again." });
+    });
+  });
+});
+
+async function handleSubmission(req, res, err) {
+  {
     if (err) {
       return res.status(400).json({ error: err.message || "Upload failed." });
     }
@@ -155,6 +168,15 @@ router.post("/zones/:id/submissions", requireAuth, (req, res) => {
       }
     }
 
+    // Strip the photo's hidden details (GPS, camera info) and turn it the
+    // right way up. Done after the checks above so rejected photos don't
+    // cost the work.
+    try {
+      await cleanPhoto(req.file, 2560);
+    } catch (cleanErr) {
+      return res.status(400).json({ error: cleanErr.message });
+    }
+
     const photoPath = `/uploads/${req.file.filename}`;
     // This runs after the upload finishes, outside Express's own error
     // catching, so a database error here must be caught by hand — otherwise
@@ -184,13 +206,13 @@ router.post("/zones/:id/submissions", requireAuth, (req, res) => {
       voteCount: 0,
       votedByMe: false,
     });
-  });
-});
+  }
+}
 
 // POST /api/submissions/:id/vote — toggle your vote on a submission.
 // Voting for your own photo isn't allowed; that's not community judging,
 // that's just clicking a button for yourself.
-router.post("/submissions/:id/vote", requireAuth, (req, res) => {
+router.post("/submissions/:id/vote", requireAuth, voteLimit, (req, res) => {
   const submissionId = req.params.id;
   const submission = db
     .prepare("SELECT user_id FROM submissions WHERE id = ?")
@@ -227,7 +249,7 @@ router.post("/submissions/:id/vote", requireAuth, (req, res) => {
 
 // POST /api/zones/:id/checkin  { lat, lng }
 // Checks you in at a zone. Needs your live location, inside the border.
-router.post("/zones/:id/checkin", requireAuth, (req, res) => {
+router.post("/zones/:id/checkin", requireAuth, checkinLimit, (req, res) => {
   const zone = db
     .prepare("SELECT id, name, lat, lng FROM zones WHERE id = ?")
     .get(req.params.id);
