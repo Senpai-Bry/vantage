@@ -5,8 +5,11 @@
 //   readPhotoLocation(file)  the location tag saved inside a JPG, if any
 //                            (phones, and many cameras paired with a
 //                            phone, save where the photo was taken)
-//   shrinkPhoto(file)        resizes big photos (like 20MB camera JPGs) so
-//                            they upload fast and fit the 5MB limit
+//   shrinkPhoto(file)        redraws the photo as a fresh JPG: big photos
+//                            (like 20MB camera JPGs) get resized so they
+//                            upload fast, and every photo loses its hidden
+//                            details (GPS, camera info) before it leaves
+//                            the device. The server cleans photos again.
 //
 // The location tag has to be read BEFORE shrinking, because redrawing the
 // photo leaves its hidden details (including the tag) behind.
@@ -88,24 +91,18 @@ function readExifGps(bytes, tiffStart) {
 // ---------------------------------------------------------------------------
 // Shrinking
 // ---------------------------------------------------------------------------
-// Returns a File ready to upload. Small photos pass through untouched.
-// Photos the browser can't open (for example HEIC on most non-Apple
-// browsers) are sent as they are, as long as they fit the size limit.
+// Returns a File ready to upload. Photos the browser can't open are sent as
+// they are, and the server decides whether it can use them.
 async function shrinkPhoto(file) {
   let image;
   try {
     image = await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch (err) {
     if (file.size <= MAX_UPLOAD_BYTES) return file;
-    throw new Error("This photo is over 5MB and this browser can't shrink it. Export it as a JPG and try again.");
+    throw new Error("This browser can't open that photo to shrink it. Export it as a JPG and try again.");
   }
 
   const longEdge = Math.max(image.width, image.height);
-  if (longEdge <= MAX_EDGE_PX && file.size <= MAX_UPLOAD_BYTES) {
-    image.close();
-    return file;
-  }
-
   const scale = Math.min(1, MAX_EDGE_PX / longEdge);
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(image.width * scale);

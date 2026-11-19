@@ -11,10 +11,11 @@
 // plain text (never as HTML).
 
 const express = require("express");
+const { uploadLimit, passwordLimit } = require("../lib/limits");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
 const requireAuth = require("../middleware/auth");
-const { upload, removeUpload } = require("../lib/uploads");
+const { upload, removeUpload, cleanPhoto } = require("../lib/uploads");
 const { rankedPlayers, holdingFor } = require("../lib/scores");
 
 const router = express.Router();
@@ -90,8 +91,18 @@ function cleanField(raw, name, label) {
   return { value };
 }
 
-router.put("/me", requireAuth, (req, res) => {
+router.put("/me", requireAuth, uploadLimit, (req, res) => {
   upload.single("avatar")(req, res, (err) => {
+    saveProfile(req, res, err).catch((unexpected) => {
+      console.error("Saving a profile failed:", unexpected);
+      if (req.file) removeUpload(`/uploads/${req.file.filename}`);
+      if (!res.headersSent) res.status(500).json({ error: "Something went wrong. Try again." });
+    });
+  });
+});
+
+async function saveProfile(req, res, err) {
+  {
     // If anything below fails, don't leave a just-uploaded file behind.
     const discardUpload = () => req.file && removeUpload(`/uploads/${req.file.filename}`);
 
@@ -122,6 +133,13 @@ router.put("/me", requireAuth, (req, res) => {
     // clears it. Either way, the old file is deleted from disk.
     let avatarPath = current.avatar_path;
     if (req.file) {
+      // Same cleaning as zone photos (no hidden GPS or camera details),
+      // and profile pictures never need to be big.
+      try {
+        await cleanPhoto(req.file, 512);
+      } catch (cleanErr) {
+        return res.status(400).json({ error: cleanErr.message });
+      }
       avatarPath = `/uploads/${req.file.filename}`;
     } else if (req.body.removeAvatar === "1") {
       avatarPath = null;
@@ -151,15 +169,15 @@ router.put("/me", requireAuth, (req, res) => {
     }
 
     res.json(toProfileJSON(userByName.get(current.username)));
-  });
-});
+  }
+}
 
 // DELETE /api/users/me  { password }
 // Permanently deletes your account: your photos, the votes you gave and
 // got, and your profile picture. Your password is asked again so a stolen
 // or forgotten-open login can't wipe an account. Any zone you held goes to
 // the next-best photo, because holders are worked out from submissions.
-router.delete("/me", requireAuth, (req, res) => {
+router.delete("/me", requireAuth, passwordLimit, (req, res) => {
   const { password } = req.body || {};
   const user = db
     .prepare("SELECT id, password_hash, avatar_path FROM users WHERE id = ?")

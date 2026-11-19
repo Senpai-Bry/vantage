@@ -28,6 +28,10 @@ Goose Creek, North Charleston, Summerville and Daniel Island, South Carolina.
   that tag is far from the zone, it's rejected.
 - **Big camera photos just work.** The browser shrinks photos to 2560 pixels
   before uploading, so 20 MB camera JPGs upload fast.
+- **Photos keep players private.** Every photo is redrawn in the browser and
+  again on the server, which removes hidden details like the exact GPS
+  location and camera serial number, and turns sideways phone photos the
+  right way up.
 - **Community voting.** One vote per photo, no voting for your own. When a
   rival's photo gets more votes, the zone changes hands.
 - **Leaderboard.** 10 points per zone held, plus 1 point per vote received.
@@ -47,7 +51,8 @@ Goose Creek, North Charleston, Summerville and Daniel Island, South Carolina.
 | Backend | Node.js, Express |
 | Database | SQLite (better-sqlite3) |
 | Accounts | bcryptjs password hashing, JSON Web Tokens |
-| Uploads | Multer (JPG, PNG, WebP and HEIC, up to 5 MB), resized in the browser with Canvas |
+| Uploads | Multer (JPG, PNG or WebP), resized in the browser with Canvas, cleaned on the server with sharp |
+| Abuse protection | express-rate-limit |
 | Map data | OpenStreetMap (via the Overpass API), JSTS for border geometry, Esri map tiles |
 | Hosting | Railway (with a persistent disk for the database and photos), Porkbun DNS |
 
@@ -72,6 +77,7 @@ Settings are optional. To change them, copy `server/.env.example` to
 - `CHALLENGE_ROTATION_HOURS=0.02` rotates challenges about once a minute.
 - `CHECKIN_HOURS=0.02` makes check-ins expire after about a minute (48 is
   the real setting).
+- `RATE_LIMITS=off` turns off the speed limits (below) while you test.
 - `JWT_SECRET` signs login sessions. If you leave it out, the server generates
   one and saves it next to the database.
 
@@ -114,8 +120,16 @@ and restart the server.
 - Passwords are stored only as bcrypt hashes.
 - Usernames are 3-20 letters, numbers, `_` or `-`, and capitals don't count as
   a different name, so nobody can pose as another player.
-- Uploads must be real photo types. The server picks each file's extension and
-  serves uploads with `nosniff`, so a disguised file can't run as a web page.
+- Uploads must be real photos: every file is opened and redrawn as a fresh
+  JPG, so a disguised file is rejected and can never run as a web page.
+  Uploads are also served with `nosniff`.
+- Hidden photo details (GPS location, camera serial number, time taken) are
+  removed before photos are stored.
+- Speed limits stop fake-account voting and password guessing: 5 new
+  accounts per hour per connection, 10 wrong passwords per 15 minutes,
+  30 photos per hour per player, and limits on votes and check-ins. On
+  Railway, visitors are told apart by the `X-Real-IP` header, which
+  Railway's edge sets and visitors can't fake.
 - Only the website's own files (`index.html`, `css/`, `js/`, `assets/`) are
   served. The server code, database and `.git` folder stay private.
 - Everything players type is shown as plain text, never as HTML.
