@@ -1,5 +1,7 @@
 # Vantage
 
+[![Tests](https://github.com/Senpai-Bry/vantage/actions/workflows/tests.yml/badge.svg)](https://github.com/Senpai-Bry/vantage/actions/workflows/tests.yml)
+
 **Street photography as a turf war.** Vantage splits a city into zones around
 real landmarks. Each zone has a photo challenge. Players go there, shoot it, and
 the community votes. The top-voted photo holds the zone, and the map is colored
@@ -83,6 +85,19 @@ Settings are optional. To change them, copy `server/.env.example` to
 
 `.env`, the database and uploaded photos are kept out of Git on purpose.
 
+## Tests
+
+```
+cd server
+npm test
+```
+
+About 50 automated tests cover accounts, zones, uploads and the geofence,
+photo privacy, check-ins, voting and scoring, profiles, account deletion,
+speed limits, and which files the site keeps private. Each test file starts
+its own server with an empty database, so your real data is never touched.
+GitHub runs the tests on every push and pull request (see the Actions tab).
+
 ## Project structure
 
 ```
@@ -108,7 +123,8 @@ vantage/
     ├── lib/                challenges, check-ins, geofence, scores, uploads, photos
     ├── middleware/auth.js  checks the login token on protected routes
     ├── routes/             auth, zones, submissions + votes, leaderboard, users
-    └── scripts/            fetch-osm, build-turf, fetch-photos (data builders)
+    ├── scripts/            fetch-osm, build-turf, fetch-photos (data builders)
+    └── test/               automated tests (npm test) and their sample photos
 ```
 
 **Adding a zone:** add an entry to `server/data/landmarks.js`, then rebuild the
